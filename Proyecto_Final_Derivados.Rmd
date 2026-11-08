@@ -1,0 +1,716 @@
+---
+title: "Proyecto Final: Derivados y Administración de Riesgos"
+subtitle: "Valuación de opciones, estrategias de cobertura y gestión de riesgos financieros con Apple Inc. (AAPL)"
+author: "Equipo 7"
+date: "9 de noviembre de 2026 · Datos de mercado al 6 de noviembre de 2026"
+lang: es
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+    theme: flatly
+    highlight: tango
+    df_print: kable
+    code_folding: show
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.width = 10, fig.height = 5.5)
+
+# Paquetes requeridos (install.packages(c("dplyr", "tidyr", "ggplot2", "knitr", "scales", "zoo", "quantmod")))
+# quantmod solo se usa si no existe datos/aapl_yahoo.csv. rugarch es opcional: si está instalado se usa para validar.
+paquetes <- c("dplyr", "tidyr", "ggplot2", "knitr", "scales", "zoo")
+faltantes <- paquetes[!vapply(paquetes, requireNamespace, logical(1), quietly = TRUE)]
+if (length(faltantes) > 0) stop("Faltan paquetes: ", paste(faltantes, collapse = ", "))
+
+library(dplyr)
+library(ggplot2)
+library(knitr)
+options(scipen = 999, dplyr.summarise.inform = FALSE, knitr.kable.NA = "")
+set.seed(123)
+
+usd  <- function(x, d = 2) paste0(ifelse(x < 0, "-US$", "US$"), formatC(abs(x), format = "f", digits = d, big.mark = ","))
+musd <- function(x, d = 1) paste0(ifelse(x < 0, "-US$", "US$"), formatC(abs(x) / 1e6, format = "f", digits = d, big.mark = ","), " millones")
+pct  <- function(x, d = 2) paste0(formatC(100 * x, format = "f", digits = d), "%")
+pb   <- function(x) paste0(round(x * 1e4), " pb")
+azul <- "#2866A5"; rojo <- "#C65D47"; gris <- "#8A8F98"; ambar <- "#B7791F"; verde <- "#2E7D4F"
+tema <- theme_minimal(base_size = 12)
+```
+
+```{r parametros, include = FALSE}
+# ==========================================================================================
+# FECHA DE CORTE Y DATOS DE MERCADO
+# Todas las valuaciones usan el 6 de noviembre de 2026. Los datos de otras fechas se
+# conservan con su fecha original y se identifican en la tabla de fuentes.
+# ==========================================================================================
+fecha_corte   <- as.Date("2026-11-06")
+fecha_inicio  <- as.Date("2021-11-06")         # cinco años de historia para GARCH
+
+# Treasuries al 6-nov-2026 (Forbes Advisor)
+ust <- c(`1` = 0.0433, `2` = 0.0451, `3` = 0.0459, `5` = 0.0464, `7` = 0.0474, `10` = 0.0486)
+r_corto <- ust[["1"]]                          # tasa para la call de 42 días
+
+# Curvas swap par con cupón anual (BlueGamma): SOFR al 2-nov-2026 y €STR al 3-nov-2026
+plazos   <- c(1, 2, 3, 5, 7, 10)
+sofr_par <- c(4.27, 4.39, 4.43, 4.41, 4.44, 4.51) / 100
+estr_par <- c(2.87, 2.99, 3.02, 3.05, 3.09, 3.17) / 100
+
+eurusd   <- 1.1132                             # EUR/USD, 6-nov-2026 (TradingNews)
+dividendo_anual <- 0.27 * 4                    # Dividendo trimestral de Apple (Q4 FY2026)
+
+# Supuestos (no son cotizaciones)
+spread_usd <- 0.0040                           # Apple sobre Treasuries
+spread_eur <- 0.0045                           # Apple sobre mid-swaps en euros
+basis_eur  <- -0.0010                          # Basis EUR/USD a 7 años
+
+# Posición del equipo en Investopedia (Holdings al cierre del 6-nov-2026)
+call_k <- 345; call_venc <- as.Date("2026-12-18"); call_prima_pagada <- 13.50
+call_valor_6nov <- 11.25                       # Valor total de US$1,125 / 100 acciones
+dias_habiles_call <- 29                        # 9-nov a 18-dic, sin Thanksgiving (26-nov)
+```
+
+# Introducción
+
+Los instrumentos financieros derivados permiten administrar la exposición a distintos riesgos de mercado: precios de
+acciones, tasas de interés, tipos de cambio y materias primas.
+
+Este proyecto integra estrategias con opciones, modelos cuantitativos de valuación y mecanismos de cobertura, con
+Apple Inc. (AAPL) como caso central. De manera complementaria se analizan estrategias sobre oro y petróleo WTI, lo que
+permite comparar mercados con volatilidades, multiplicadores y mecánicas distintas.
+
+El proyecto incorpora modelos GARCH, simulación Monte Carlo, árboles binomiales, griegas, un bono convertible y swaps de
+divisas y de tasas.
+
+**Fecha de corte.** Todas las valuaciones usan los precios de cierre del **viernes 6 de noviembre de 2026**. Las
+operaciones y cotizaciones históricas (Bloomberg del 14 de octubre, LSEG del 12 de octubre, CME del 27 y 28 de octubre)
+conservan su fecha original y se identifican como tales en cada tabla y en la sección de fuentes.
+
+# Objetivos
+
+## Objetivo general
+
+Analizar la valuación, el comportamiento y la aplicación de instrumentos financieros derivados para la administración de
+riesgos de mercado, integrando modelos cuantitativos con evidencia de operaciones simuladas.
+
+## Objetivos específicos
+
+1. Evaluar estrategias de opciones sobre acciones, materias primas y otros activos financieros.
+2. Estimar volatilidad y escenarios futuros mediante GARCH y simulación Monte Carlo.
+3. Valuar opciones utilizando árboles binomiales y comparar los resultados con precios observados.
+4. Analizar la exposición a riesgos de tasas de interés y tipo de cambio mediante instrumentos de cobertura.
+5. Comparar los resultados de las estrategias simuladas con los resultados teóricos de los modelos.
+6. Identificar las limitaciones de los modelos y las principales fuentes de riesgo.
+
+# Datos
+
+```{r datos-aapl}
+# Fuente: Yahoo Finance. Para que el reporte sea reproducible, la serie se guarda en datos/aapl_yahoo.csv;
+# si el archivo no existe, se descarga con quantmod y se guarda.
+archivo_aapl <- file.path("datos", "aapl_yahoo.csv")
+if (!file.exists(archivo_aapl)) {
+  if (!requireNamespace("quantmod", quietly = TRUE)) stop("Instala quantmod o coloca datos/aapl_yahoo.csv")
+  x <- quantmod::getSymbols("AAPL", src = "yahoo", from = fecha_inicio, to = fecha_corte + 1, auto.assign = FALSE)
+  dir.create("datos", showWarnings = FALSE)
+  write.csv(data.frame(fecha = zoo::index(x), zoo::coredata(x)), archivo_aapl, row.names = FALSE)
+}
+crudo <- read.csv(archivo_aapl, check.names = FALSE)
+names(crudo) <- sub("^AAPL\\.", "", names(crudo))
+aapl <- crudo %>%
+  transmute(fecha = as.Date(fecha), cierre = as.numeric(Close), ajustado = as.numeric(Adjusted)) %>%
+  filter(!is.na(ajustado), fecha >= fecha_inicio, fecha <= fecha_corte) %>%
+  arrange(fecha) %>%
+  mutate(rend = log(ajustado / lag(ajustado)))
+
+S0 <- tail(aapl$cierre, 1)          # precio de mercado sin ajustar al corte
+q  <- dividendo_anual / S0
+
+kable(data.frame(Indicador = c("Observaciones", "Primera fecha", "Última fecha", "Cierre al corte (sin ajustar)"),
+                 Valor = c(nrow(aapl), format(min(aapl$fecha)), format(max(aapl$fecha)), usd(S0))),
+      caption = "Serie diaria de AAPL utilizada")
+
+ggplot(aapl, aes(fecha, ajustado)) + geom_line(color = azul, linewidth = 0.6) +
+  geom_hline(yintercept = c(330.80, call_k), linetype = c("dotted", "dashed"), color = c(verde, rojo)) +
+  labs(title = "Apple (AAPL): precio ajustado", subtitle = "Línea punteada: compra del equipo (330.80) · discontinua: strike de la call (345)",
+       x = NULL, y = "USD", caption = "Fuente: Yahoo Finance. Elaboración propia.") + tema
+```
+
+**Fuente y justificación.** Se usa Yahoo Finance porque ofrece una serie continua de precios ajustados, fácil de
+reproducir en R. El periodo es de cinco años (`r format(min(aapl$fecha))` a `r format(max(aapl$fecha))`, `r nrow(aapl)`
+observaciones): con dos años el GARCH no identifica bien la persistencia (en la versión anterior ω no era significativo y
+la persistencia era de 0.78). Los rendimientos se calculan con precios ajustados; las valuaciones usan el cierre sin
+ajustar del 6 de noviembre (`r usd(S0)`), que coincide con el precio de Investopedia.
+
+```{r rendimientos}
+r <- na.omit(aapl$rend)
+kable(data.frame(
+  Indicador = c("Rendimiento promedio diario", "Volatilidad diaria", "Volatilidad anualizada", "Asimetría", "Curtosis",
+                "Rendimiento mínimo", "Rendimiento máximo"),
+  Valor = c(pct(mean(r), 3), pct(sd(r), 3), pct(sd(r) * sqrt(252)),
+            round(mean((r - mean(r))^3) / sd(r)^3, 2), round(mean((r - mean(r))^4) / sd(r)^4, 2), pct(min(r)), pct(max(r)))),
+  caption = "Estadísticas descriptivas de los rendimientos logarítmicos")
+
+ggplot(aapl[-1, ], aes(fecha, rend)) + geom_line(color = azul, linewidth = 0.35) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "Rendimientos logarítmicos diarios de AAPL", x = NULL, y = NULL, caption = "Fuente: Yahoo Finance.") + tema
+```
+
+La curtosis de `r round(mean((r - mean(r))^4) / sd(r)^4, 1)` (3 en una normal) indica colas pesadas: los días extremos son
+más frecuentes de lo que supone una distribución normal. Por eso el GARCH se estima con distribución t de Student.
+
+# Volatilidad: GARCH(1,1) con distribución t de Student
+
+$$r_t=\mu+\varepsilon_t,\qquad \sigma_t^2=\omega+\alpha\,\varepsilon_{t-1}^2+\beta\,\sigma_{t-1}^2,\qquad V_L=\frac{\omega}{1-\alpha-\beta}$$
+
+El modelo se estima por máxima verosimilitud con código propio, para que el reporte no dependa de paquetes externos. Si
+`rugarch` está instalado, se estima también con ese paquete como validación.
+
+```{r garch}
+y <- as.numeric(r) * 100                     # rendimientos en %
+
+garch_t_nll <- function(par, y) {
+  mu <- par[1]; omega <- exp(par[2]); a <- plogis(par[3]); b <- (1 - a) * plogis(par[4]); nu <- 2.05 + exp(par[5])
+  e <- y - mu; n <- length(y); h <- numeric(n); h[1] <- var(y)
+  for (t in 2:n) h[t] <- omega + a * e[t - 1]^2 + b * h[t - 1]
+  ll <- lgamma((nu + 1) / 2) - lgamma(nu / 2) - 0.5 * log(pi * (nu - 2)) - 0.5 * log(h) -
+        (nu + 1) / 2 * log(1 + e^2 / (h * (nu - 2)))
+  -sum(ll)
+}
+inicio <- c(mean(y), log(0.05 * var(y)), qlogis(0.08), qlogis(0.90 / 0.92), log(5))
+ajuste <- optim(inicio, garch_t_nll, y = y, method = "BFGS", control = list(maxit = 2000), hessian = TRUE)
+p <- ajuste$par
+g_mu <- p[1]; g_omega <- exp(p[2]); g_alpha <- plogis(p[3]); g_beta <- (1 - g_alpha) * plogis(p[4]); g_nu <- 2.05 + exp(p[5])
+g_pers <- g_alpha + g_beta
+g_VL <- g_omega / (1 - g_pers)
+e <- y - g_mu; h <- numeric(length(y)); h[1] <- var(y)
+for (t in 2:length(y)) h[t] <- g_omega + g_alpha * e[t - 1]^2 + g_beta * h[t - 1]
+h_next <- g_omega + g_alpha * e[length(e)]^2 + g_beta * h[length(h)]
+vol_hoy <- sqrt(252 * h_next) / 100
+vol_lp  <- sqrt(252 * g_VL) / 100
+vida_media <- log(0.5) / log(g_pers)
+
+# Errores estándar por el método delta sobre los parámetros transformados
+se_trans <- sqrt(pmax(diag(solve(ajuste$hessian)), 0))
+num_jac <- function(f, p, i, h = 1e-5) { pp <- p; pp[i] <- p[i] + h; pm <- p; pm[i] <- p[i] - h; (f(pp) - f(pm)) / (2 * h) }
+fs <- list(function(p) p[1], function(p) exp(p[2]), function(p) plogis(p[3]),
+           function(p) (1 - plogis(p[3])) * plogis(p[4]), function(p) 2.05 + exp(p[5]))
+se <- sapply(1:5, function(i) abs(num_jac(fs[[i]], p, i)) * se_trans[i])
+est <- c(g_mu, g_omega, g_alpha, g_beta, g_nu)
+tabla_garch <- data.frame(Parámetro = c("mu", "omega", "alpha1", "beta1", "shape (grados de libertad)"),
+                          Estimación = round(est, 5), `Error estándar` = round(se, 5),
+                          `p-valor` = round(2 * pnorm(-abs(est / se)), 4), check.names = FALSE)
+kable(tabla_garch, caption = "GARCH(1,1)-t estimado por máxima verosimilitud (error estándar aproximado por el método delta)")
+
+kable(data.frame(Indicador = c("Persistencia α + β", "Vida media de un shock", "Volatilidad de hoy (6-nov)", "Volatilidad de largo plazo",
+                               "Convergencia del optimizador"),
+                 Valor = c(round(g_pers, 4), paste(round(vida_media, 1), "días"), pct(vol_hoy), pct(vol_lp),
+                           ifelse(ajuste$convergence == 0, "Correcta (código 0)", paste("Código", ajuste$convergence)))),
+      caption = "Diagnóstico del modelo")
+
+if (requireNamespace("rugarch", quietly = TRUE)) {
+  esp <- rugarch::ugarchspec(variance.model = list(model = "sGARCH", garchOrder = c(1, 1)),
+                             mean.model = list(armaOrder = c(0, 0), include.mean = TRUE), distribution.model = "std")
+  fit <- rugarch::ugarchfit(esp, y, solver = "hybrid")
+  kable(data.frame(Parámetro = names(rugarch::coef(fit)), rugarch = round(rugarch::coef(fit), 5), `Código propio` = round(est, 5),
+                   check.names = FALSE), caption = "Validación contra rugarch")
+}
+
+datos_vol <- data.frame(fecha = aapl$fecha[-1], GARCH = sqrt(252 * h) / 100,
+                        `Histórica 30 días` = zoo::rollapply(y, 30, sd, fill = NA, align = "right") * sqrt(252) / 100, check.names = FALSE) %>%
+  tidyr::pivot_longer(-fecha)
+ggplot(datos_vol, aes(fecha, value, color = name)) + geom_line(linewidth = 0.55) +
+  geom_hline(yintercept = vol_lp, linetype = "dashed", color = rojo) +
+  scale_color_manual(values = c(GARCH = azul, `Histórica 30 días` = gris)) + scale_y_continuous(labels = scales::percent) +
+  labs(title = "Volatilidad condicional GARCH(1,1)-t de AAPL", subtitle = "Línea discontinua: volatilidad de largo plazo",
+       x = NULL, y = "Volatilidad anualizada", color = NULL, caption = "Fuente: Yahoo Finance. Elaboración propia.") + tema
+```
+
+```{r garch-pronostico}
+# Pronóstico de la varianza: E[h_{t+k}] = V_L + (α+β)^(k-1) (h_{t+1} - V_L)
+pron_h <- function(k) g_VL + g_pers^(k - 1) * (h_next - g_VL)
+vol_prom <- function(dias) sqrt(252 * mean(pron_h(1:dias))) / 100
+plazos_vol <- c(1, 10, dias_habiles_call, 63, 126, 252)
+kable(data.frame(Horizonte = c("1 sesión", "10 sesiones", paste(dias_habiles_call, "sesiones (vencimiento de la call)"), "3 meses", "6 meses", "1 año"),
+                 `Volatilidad promedio anualizada` = pct(sapply(plazos_vol, vol_prom)), check.names = FALSE),
+      caption = "Estructura temporal de la volatilidad pronosticada")
+sigma_call <- vol_prom(dias_habiles_call)
+```
+
+**Interpretación.** El modelo converge y los parámetros de varianza son significativos. La persistencia de
+`r round(g_pers, 3)` implica que un shock pierde la mitad de su efecto en unos `r round(vida_media)` días. Hoy la volatilidad
+condicional es `r pct(vol_hoy, 1)` y su nivel de largo plazo es `r pct(vol_lp, 1)`, así que el modelo espera que
+`r ifelse(vol_hoy > vol_lp, "baje", "suba")` gradualmente. Los grados de libertad de la t (`r round(g_nu, 1)`) confirman colas
+pesadas. Para valuar la call de diciembre no se usa la volatilidad de un día, sino el promedio esperado durante su vida
+(Hull, sección 23.6): `r pct(sigma_call, 1)`.
+
+# Simulación Monte Carlo con GARCH
+
+Cada trayectoria actualiza su varianza con GARCH día a día y usa choques t de Student, hasta el vencimiento de la call
+(`r dias_habiles_call` sesiones).
+
+```{r monte-carlo}
+n_sim <- 10000
+sim_garch <- function(n_sim, H, mu_diaria) {
+  S <- matrix(NA_real_, H + 1, n_sim); S[1, ] <- S0
+  hh <- rep(h_next, n_sim)
+  for (t in 1:H) {
+    z <- rt(n_sim, df = g_nu) * sqrt((g_nu - 2) / g_nu)        # choques t con varianza 1
+    eps <- sqrt(hh) * z                                         # en %
+    S[t + 1, ] <- S[t, ] * exp(mu_diaria - 0.5 * hh / 1e4 + eps / 100)
+    hh <- g_omega + g_alpha * eps^2 + g_beta * hh
+  }
+  S
+}
+set.seed(123)
+S_mc <- sim_garch(n_sim, dias_habiles_call, mean(r))
+ST <- S_mc[dias_habiles_call + 1, ]
+equilibrio <- call_k + call_prima_pagada
+kable(data.frame(Indicador = c("Precio inicial (6-nov)", "Media al vencimiento", "Mediana", "Percentil 5%", "Percentil 95%",
+                               "Probabilidad de terminar arriba de hoy", "Probabilidad de superar el strike (345)",
+                               paste0("Probabilidad de superar el equilibrio (", usd(equilibrio), ")")),
+                 Valor = c(usd(S0), usd(mean(ST)), usd(median(ST)), usd(quantile(ST, 0.05)), usd(quantile(ST, 0.95)),
+                           pct(mean(ST > S0), 1), pct(mean(ST > call_k), 1), pct(mean(ST > equilibrio), 1))),
+      caption = "Monte Carlo GARCH al 18 de diciembre de 2026 (10,000 trayectorias, mundo real)")
+
+tray <- data.frame(sesion = rep(0:dias_habiles_call, 100), precio = as.vector(S_mc[, 1:100]), sim = rep(1:100, each = dias_habiles_call + 1))
+ggplot(tray, aes(sesion, precio, group = sim)) + geom_line(alpha = 0.18, color = azul) +
+  geom_hline(yintercept = c(call_k, equilibrio), linetype = c("dashed", "dotted"), color = rojo) +
+  labs(title = "Monte Carlo GARCH: 100 de 10,000 trayectorias de AAPL", subtitle = "Discontinua: strike 345 · punteada: equilibrio con la prima pagada",
+       x = "Sesiones al vencimiento", y = "USD", caption = "Elaboración propia.") + tema
+```
+
+**Interpretación.** Al vencimiento, el 90% de los escenarios queda entre `r usd(quantile(ST, 0.05))` y
+`r usd(quantile(ST, 0.95))`. La call termina dentro del dinero en `r pct(mean(ST > call_k), 0)` de los escenarios, pero solo
+en `r pct(mean(ST > equilibrio), 0)` el precio supera `r usd(equilibrio)`, el nivel necesario para recuperar la prima de
+US$13.50. Son probabilidades del mundo real (con el rendimiento histórico promedio), no neutrales al riesgo, así que no
+sirven para valuar la opción: para eso se usa el árbol.
+
+# Árbol binomial: la call AAPL 345 contra el precio de mercado
+
+```{r arbol}
+T_call <- as.numeric(call_venc - fecha_corte) / 365
+crr <- function(S0, K, r, q, sigma, T, N = 500, tipo = "call", americana = TRUE) {
+  dt <- T / N; u <- exp(sigma * sqrt(dt)); d <- 1 / u; p <- (exp((r - q) * dt) - d) / (u - d)
+  if (p <= 0 || p >= 1) stop("Probabilidad neutral al riesgo inválida.")
+  pago <- function(S) if (tipo == "call") pmax(S - K, 0) else pmax(K - S, 0)
+  V <- pago(S0 * u^(0:N) * d^(N:0))
+  for (i in (N - 1):0) {
+    V <- exp(-r * dt) * (p * V[2:(i + 2)] + (1 - p) * V[1:(i + 1)])
+    if (americana) V <- pmax(V, pago(S0 * u^(0:i) * d^(i:0)))
+  }
+  V[1]
+}
+iv_mercado <- uniroot(function(s) crr(S0, call_k, r_corto, q, s, T_call, 300) - call_valor_6nov, c(0.05, 1.5))$root
+vol_hist_1a <- sd(tail(r, 252)) * sqrt(252)
+escenarios <- data.frame(
+  Volatilidad = c("Histórica último año", "GARCH: promedio a vencimiento", "GARCH: largo plazo", "Implícita del mercado (Investopedia)"),
+  sigma = c(vol_hist_1a, sigma_call, vol_lp, iv_mercado)) %>%
+  mutate(`Valor CRR (USD por acción)` = sapply(sigma, function(s) crr(S0, call_k, r_corto, q, s, T_call)),
+         `Contra mercado (11.25 USD)` = `Valor CRR (USD por acción)` - call_valor_6nov, sigma = pct(sigma, 1))
+kable(escenarios, digits = 2, caption = paste0("Call americana AAPL 345, vence 18-dic-2026 (S = ", usd(S0), ", r = ", pct(r_corto),
+                                              ", q = ", pct(q), ", ", round(T_call * 365), " días, 500 pasos)"))
+
+sens <- data.frame(sigma = seq(0.15, 0.50, by = 0.01)) %>% mutate(valor = sapply(sigma, function(s) crr(S0, call_k, r_corto, q, s, T_call, 300)))
+ggplot(sens, aes(sigma, valor)) + geom_line(color = azul, linewidth = 1) +
+  geom_hline(yintercept = c(call_valor_6nov, call_prima_pagada), linetype = c("dashed", "dotted"), color = c(rojo, gris)) +
+  geom_vline(xintercept = c(iv_mercado, sigma_call), linetype = "dashed", color = c(rojo, azul)) +
+  annotate("text", x = iv_mercado, y = max(sens$valor), label = paste("IV", pct(iv_mercado, 1)), hjust = -0.1, color = rojo) +
+  annotate("text", x = sigma_call, y = max(sens$valor) * 0.92, label = paste("GARCH", pct(sigma_call, 1)), hjust = -0.1, color = azul) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(title = "Valor de la call según la volatilidad", subtitle = "Discontinua horizontal: valor de mercado (11.25) · punteada: prima pagada (13.50)",
+       x = "Volatilidad anual", y = "USD por acción", caption = "Modelo CRR americano. Elaboración propia.") + tema
+```
+
+**Interpretación.** Con la volatilidad que GARCH espera para la vida de la opción (`r pct(sigma_call, 1)`), el árbol vale
+`r usd(crr(S0, call_k, r_corto, q, sigma_call, T_call))` por acción, contra `r usd(call_valor_6nov)` en el mercado. La
+volatilidad implícita del precio de mercado es `r pct(iv_mercado, 1)`: `r ifelse(sigma_call > iv_mercado, "GARCH espera más movimiento del que cobra el mercado, así que la opción se ve barata", "el mercado cobra más volatilidad de la que espera GARCH, así que la opción se ve cara")`.
+La versión anterior del reporte usaba la volatilidad de un solo día (33.6%) para una opción de 42 días, lo que sobreestimaba
+su valor. La prima pagada el 27 de octubre (US$13.50) es de otra fecha y no se compara directamente.
+
+# Bono convertible hipotético de Apple
+
+Réplica del caso *Molson Coors Brewing Co.: Valuing a Convertible Bond*: Apple emite US$10,000 millones a 6 años con 30%
+de prima de conversión.
+
+```{r convertible}
+conv_F <- 1000; conv_monto <- 10e9; conv_T <- 6; conv_m <- 2; conv_prima <- 0.30
+conv_sigma <- vol_lp                                             # volatilidad de largo plazo de GARCH
+conv_rf <- (ust[["5"]] + ust[["7"]]) / 2                         # Treasury a 6 años interpolado
+conv_y  <- conv_rf + spread_usd
+bs_call <- function(S, K, r, q, s, T) { d1 <- (log(S / K) + (r - q + s^2 / 2) * T) / (s * sqrt(T)); d2 <- d1 - s * sqrt(T)
+  S * exp(-q * T) * pnorm(d1) - K * exp(-r * T) * pnorm(d2) }
+precio_bono <- function(c, y = conv_y) { n <- conv_T * conv_m; sum(conv_F * c / conv_m / (1 + y / conv_m)^(1:n)) + conv_F / (1 + y / conv_m)^n }
+
+conv_K <- S0 * (1 + conv_prima); conv_n <- conv_F / conv_K
+conv_opcion <- bs_call(S0, conv_K, conv_rf, q, conv_sigma, conv_T) * conv_n
+conv_cupon <- uniroot(function(c) precio_bono(c) + conv_opcion - conv_F, c(-0.3, 0.3), tol = 1e-12)$root
+conv_bono <- precio_bono(conv_cupon)
+conv_ahorro <- (conv_y - conv_cupon) * conv_monto
+
+# Valor presente de la reducción de intereses
+n_per <- conv_T * conv_m
+vp_ahorro <- sum((conv_ahorro / conv_m) / (1 + conv_y / conv_m)^(1:n_per))
+n_bonos <- conv_monto / conv_F
+
+kable(data.frame(Indicador = c("Precio AAPL (6-nov)", "Precio de conversión", "Acciones por bono", "Volatilidad (GARCH largo plazo)",
+                               "Treasury 6 años", "Rendimiento de deuda convencional", "Dividendo (q)",
+                               "Opción de conversión por bono", "Bono sin conversión", "Cupón que deja el convertible a la par"),
+                 Valor = c(usd(S0), usd(conv_K), round(conv_n, 4), pct(conv_sigma, 1), pct(conv_rf), pct(conv_y), pct(q),
+                           usd(conv_opcion), usd(conv_bono), pct(conv_cupon))),
+      caption = "Valuación del convertible: bono + opción (Black-Scholes-Merton con dividendo)")
+```
+
+## ¿El convertible ahorra dinero? Valor presente contra valor de la opción
+
+```{r convertible-vpn}
+kable(data.frame(
+  Concepto = c("Reducción nominal de intereses por año", "Valor presente de esa reducción (6 años)",
+               "Valor de las opciones de conversión entregadas", "Diferencia (VPN para los accionistas actuales)"),
+  Monto = c(musd(conv_ahorro), musd(vp_ahorro), musd(conv_opcion * n_bonos), musd(vp_ahorro - conv_opcion * n_bonos))),
+  caption = "El ahorro de intereses es exactamente el pago por las opciones que se entregan")
+```
+
+**Interpretación.** El menor cupón reduce los intereses en `r musd(conv_ahorro)` al año, pero esa cifra **no es un ahorro
+económico**. Su valor presente (`r musd(vp_ahorro)`) es igual al valor de las opciones de conversión que Apple entrega a los
+inversionistas (`r musd(conv_opcion * n_bonos)`). No es coincidencia: el cupón se calcula para que bono más opción valgan
+US$1,000. Si la opción está valuada a precio justo, el VPN para los accionistas actuales es cero; Apple paga en acciones
+futuras lo que deja de pagar en intereses.
+
+La versión anterior restaba el costo del call spread a ese valor presente y obtenía una "diferencia positiva" de
+US$1,269.90 millones; esa cifra se eliminó porque compara un pago con su propia contraprestación. El convertible conviene por
+otras razones: menor salida de efectivo, una volatilidad implícita que el mercado pague por encima de su valor, ventajas
+fiscales o una señal de confianza en la acción.
+
+## Call spread para mitigar la dilución
+
+```{r call-spread}
+K1 <- conv_K; K2 <- S0 * 1.75
+c1 <- bs_call(S0, K1, conv_rf, q, conv_sigma, conv_T); c2 <- bs_call(S0, K2, conv_rf, q, conv_sigma, conv_T)
+acc_conv <- n_bonos * conv_n
+cs_total <- acc_conv * (c1 - c2)
+kable(data.frame(Indicador = c("Strike comprado (prima 30%)", "Strike vendido (prima 75%)", "Call comprada por acción", "Call vendida por acción",
+                               "Acciones potenciales por conversión", "Costo neto del call spread", "Costo neto (% del principal)",
+                               "Dilución potencial sin cobertura"),
+                 Valor = c(usd(K1), usd(K2), usd(c1), usd(c2), paste(round(acc_conv / 1e6, 2), "millones"), musd(cs_total),
+                           pct(cs_total / conv_monto, 1), pct(acc_conv / 14532.2e6, 2))),
+      caption = "Call spread: de 30% a 75% de prima efectiva")
+```
+
+**Interpretación.** Llevar la prima efectiva a 75% cuesta `r musd(cs_total)` (`r pct(cs_total / conv_monto, 1)` del
+principal), similar al 8.6% del caso Molson Coors. Si el call spread también está a precio justo, su VPN es cero: no crea
+valor, solo traslada a Apple el costo de evitar la dilución entre US$`r round(K1)` y US$`r round(K2)`. Para Apple, cuya
+dilución potencial es de `r pct(acc_conv / 14532.2e6, 2)` de sus acciones, se justifica más como señal que como protección.
+
+# Administración del riesgo cambiario y de tasas de interés
+
+Apple emite €5,000 millones a 7 años en la zona euro, donde vendió US$127,600 millones en su año fiscal 2026, y los
+convierte a dólares con un cross-currency swap. Después puede cambiar la tasa fija en dólares por flotante con un interest
+rate swap.
+
+## Curvas de descuento
+
+```{r curvas}
+bootstrap <- function(par) {
+  pr <- approx(plazos, par, xout = 1:10, rule = 2)$y; D <- numeric(10)
+  for (i in 1:10) D[i] <- (1 - pr[i] * sum(D[seq_len(i - 1)])) / (1 + pr[i])
+  list(par = pr, D = D)
+}
+cu <- bootstrap(sofr_par); ce <- bootstrap(estr_par)
+De_adj <- ce$D * exp(-basis_eur * (1:10))
+curvas <- data.frame(Año = 1:10, `SOFR par` = cu$par, `DF USD` = cu$D, `€STR par` = ce$par, `DF EUR` = ce$D,
+                     `Forward EUR/USD` = eurusd * ce$D / cu$D, check.names = FALSE)
+kable(curvas, digits = 4, caption = "Curvas bootstrap (SOFR al 2-nov y €STR al 3-nov) y tipo de cambio forward implícito")
+```
+
+## Cross-currency swap EUR/USD
+
+```{r ccs}
+ccs_eur <- 5000e6; ccs_T <- 7
+ccs_usd <- ccs_eur * eurusd
+ccs_cupon_eur <- ce$par[ccs_T] + spread_eur
+pv_eur <- function(D, c = ccs_cupon_eur) ccs_eur * (c * sum(D[1:ccs_T]) + D[ccs_T])
+ccs_tasa_usd <- uniroot(function(x) ccs_usd * (x * sum(cu$D[1:ccs_T]) + cu$D[ccs_T]) - eurusd * pv_eur(De_adj), c(0, 0.2), tol = 1e-12)$root
+directo_usd <- ust[["7"]] + spread_usd
+kable(data.frame(Concepto = c("Principal", "Principal equivalente (EUR/USD 6-nov)", "Cupón del bono en euros", "Tasa fija en USD del CCS (par)",
+                              "Bono senior de Apple directo en USD", "Diferencia a favor del CCS"),
+                 Valor = c("€5,000 millones", musd(ccs_usd), pct(ccs_cupon_eur), pct(ccs_tasa_usd), pct(directo_usd), pb(directo_usd - ccs_tasa_usd))),
+      caption = "Condiciones del cross-currency swap (valuado con curvas; vale cero al inicio)")
+
+# Comparación correcta: con y sin CCS, usando el tipo de cambio forward en lugar de uno constante
+fwd <- eurusd * ce$D[1:ccs_T] / cu$D[1:ccs_T]
+flujos <- data.frame(Año = 1:ccs_T,
+                     `Sin CCS, a tipo de cambio forward` = -(ccs_eur * ccs_cupon_eur + c(rep(0, ccs_T - 1), ccs_eur)) * fwd / 1e6,
+                     `Con CCS` = -(ccs_usd * ccs_tasa_usd + c(rep(0, ccs_T - 1), ccs_usd)) / 1e6, check.names = FALSE)
+vp_sin <- sum(flujos[[2]] * cu$D[1:ccs_T]); vp_con <- sum(flujos[[3]] * cu$D[1:ccs_T])
+kable(rbind(flujos, data.frame(Año = "VP", `Sin CCS, a tipo de cambio forward` = vp_sin, `Con CCS` = vp_con, check.names = FALSE)),
+      digits = 1, caption = "Flujos en millones de USD (negativo = pago de Apple)")
+```
+
+**Interpretación.** Los cupones con CCS (`r musd(ccs_usd * ccs_tasa_usd)` al año) son mayores que los cupones en euros
+convertidos al tipo de cambio de hoy, y la versión anterior concluía que el CCS "es más caro en todos los escenarios". Esa
+comparación usaba un tipo de cambio constante. El mercado ya descuenta que el euro se aprecie por el diferencial de tasas: el
+forward a 7 años es `r round(fwd[ccs_T], 4)`. Además, al vencimiento Apple tendría que comprar €5,000 millones a ese precio.
+Con el tipo de cambio forward, ambas alternativas tienen casi el mismo valor presente (`r musd(vp_sin * 1e6)` contra
+`r musd(vp_con * 1e6)`); la diferencia sale del basis y del diferencial de crédito. El CCS no encarece la deuda: fija el
+tipo de cambio.
+
+Además, emitir en euros y cambiar a dólares cuesta `r pct(ccs_tasa_usd)`, `r pb(directo_usd - ccs_tasa_usd)` menos que un
+bono directo en dólares (`r pct(directo_usd)`): en dólares los bonos se cotizan sobre Treasuries, que hoy rinden más que los
+swaps SOFR. Es la ventaja comparativa de Hull (capítulo 7).
+
+```{r ccs-escenarios}
+choque <- function(D, s) D * exp(-s * seq_along(D))
+valor_ccs  <- function(fx, s_usd = 0, s_eur = 0) (fx * pv_eur(choque(De_adj, s_eur)) - ccs_usd * (ccs_tasa_usd * sum(choque(cu$D, s_usd)[1:ccs_T]) + choque(cu$D, s_usd)[ccs_T])) / 1e6
+valor_bono <- function(fx, s_eur = 0) -fx * pv_eur(choque(De_adj * exp(-spread_eur * (1:10)), s_eur)) / 1e6
+esc <- data.frame(`Variación EUR` = c(-0.20, -0.10, 0, 0.10, 0.20), check.names = FALSE) %>%
+  mutate(`EUR/USD` = eurusd * (1 + `Variación EUR`),
+         `Bono en euros` = sapply(`EUR/USD`, valor_bono) - valor_bono(eurusd),
+         `CCS` = sapply(`EUR/USD`, valor_ccs) - valor_ccs(eurusd),
+         `Bono + CCS` = `Bono en euros` + `CCS`, `Variación EUR` = paste0(100 * `Variación EUR`, "%"))
+kable(esc, digits = c(0, 4, 1, 1, 1), caption = "Cambio de valor en millones de USD (positivo = ganancia para Apple)")
+ggplot(tidyr::pivot_longer(mutate(esc, fx = `EUR/USD`), c(`Bono en euros`, `CCS`, `Bono + CCS`)), aes(fx, value, color = name)) +
+  geom_line(linewidth = 1) + geom_point() + geom_hline(yintercept = 0, linetype = "dashed", color = gris) +
+  scale_color_manual(values = c(`Bono en euros` = rojo, CCS = ambar, `Bono + CCS` = "black")) +
+  labs(title = "La cobertura funciona: el CCS compensa el cambio de valor de la deuda en euros", x = "EUR/USD", y = "Millones de USD", color = NULL,
+       caption = "Valuación con curvas SOFR y €STR. Elaboración propia.") + tema
+```
+
+**Interpretación.** Si el euro se aprecia 20%, la deuda en euros cuesta `r musd(-esc[[3]][5] * 1e6, 0)` más en dólares,
+pero el CCS gana `r musd(esc[[4]][5] * 1e6, 0)`: el neto se mueve `r musd(esc[[5]][5] * 1e6, 0)`. Un valor negativo del CCS
+por sí solo no es una pérdida de la estrategia, porque se compensa con la deuda que cubre.
+
+## Interest rate swap: de tasa fija a flotante
+
+```{r irs}
+irs_fijo <- cu$par[ccs_T]                                   # tasa par de mercado, no la tasa de la deuda
+irs_spread <- ccs_tasa_usd - irs_fijo
+irs_valor_bonos <- function(D) ccs_usd * (irs_fijo * sum(D[1:ccs_T]) + D[ccs_T]) - ccs_usd
+irs_valor_fras  <- function(D) { f <- c(1 / D[1] - 1, D[1:(ccs_T - 1)] / D[2:ccs_T] - 1); sum(ccs_usd * (irs_fijo - f) * D[1:ccs_T]) }
+esc_irs <- data.frame(`Choque SOFR (pb)` = c(-200, -100, -50, 0, 50, 100, 200), check.names = FALSE) %>%
+  mutate(`Método de bonos` = sapply(`Choque SOFR (pb)`, function(s) irs_valor_bonos(choque(cu$D, s / 1e4))) / 1e6,
+         `Método de FRAs` = sapply(`Choque SOFR (pb)`, function(s) irs_valor_fras(choque(cu$D, s / 1e4))) / 1e6)
+dv01 <- (irs_valor_bonos(choque(cu$D, -1e-4)) - irs_valor_bonos(choque(cu$D, 1e-4))) / 2
+kable(esc_irs, digits = 1, caption = paste0("Valor del IRS para Apple (recibe ", pct(irs_fijo), " fijo y paga SOFR), millones de USD"))
+
+flujo_sofr <- data.frame(SOFR = c(0.025, 0.035, 0.045, 0.055, 0.065)) %>%
+  mutate(`Deuda fija (sin IRS)` = ccs_usd * ccs_tasa_usd / 1e6,
+         `Deuda + IRS` = ccs_usd * (ccs_tasa_usd - irs_fijo + SOFR) / 1e6, SOFR = pct(SOFR))
+kable(flujo_sofr, digits = 1, caption = "Pago anual en millones de USD si SOFR se mantuviera en cada nivel")
+```
+
+**Interpretación.** La versión anterior suponía que Apple recibía 5.02% en el IRS, la misma tasa que paga, y por eso los
+flujos fijos se cancelaban. El swap SOFR de mercado a 7 años está en `r pct(irs_fijo)`, así que el costo flotante correcto
+es **SOFR + `r pb(irs_spread)`**. Al contratarse, el IRS vale cero. Si SOFR baja 100 pb gana
+`r musd(esc_irs[[2]][2] * 1e6, 0)`; si sube 100 pb pierde `r musd(-esc_irs[[2]][6] * 1e6, 0)`. Los dos métodos de Hull (bonos y
+FRAs) dan el mismo valor, y el DV01 es de `r usd(dv01, 0)` por punto base. El IRS no elimina el riesgo de tasas: lo cambia de
+riesgo de valor a riesgo de flujo.
+
+# Portafolio de 18 estrategias de opciones y griegas
+
+Las 18 estrategias (seis por subyacente) se desarrollaron con datos de LSEG del 12 de octubre de 2026. Son estrategias
+**modeladas**: no implican que se hayan ejecutado.
+
+```{r griegas}
+# Datos de la Tarea 3 del equipo (LSEG, 12-oct-2026), incluidos aquí para que el reporte compile sin archivos externos.
+griegas_equipo <- read.csv(text = "id,Estrategia,Delta_unid,Delta_USD_1pct,Gamma_USD_1pct,Vega_USD_1pp,Theta_USD_dia,Rho_USD_1pp
+A1,Bull Call Spread,36.05,123.04,6.42,5.13,-8.83,2.29
+A2,Bear Put Spread,-29.15,-99.49,9.72,7.82,-10.57,-1.96
+A3,Long Straddle,12.95,44.19,44.5,37.21,-58.36,0.69
+A4,Short Iron Butterfly,-6.9,-23.56,-16.14,-12.95,19.41,-0.33
+A5,Call Calendar Spread (x2),37.37,127.52,-14.19,58.82,16.26,24.64
+A6,Collar (100 acciones),64.86,221.37,-4.75,-2.67,3.22,-2.29
+G1,Bull Call Spread,25.4,1064.61,24.9,105.52,-20.82,-8.38
+G2,Bear Put Spread,-24.1,-1009.98,26.98,123.79,-27.18,-8.42
+G3,Long Straddle,3.2,134.04,238.94,1141.5,-266.55,-27.28
+G4,Short Iron Butterfly,-1.3,-54.63,-51.87,-229.31,48.0,16.8
+G5,Risk Reversal (x2),100.06,4194.15,3.83,36.54,-13.04,-0.51
+G6,Call Calendar Spread (x2),22.53,965.47,-48.35,776.39,59.41,-56.28
+W1,Bear Put Spread,-195.28,-178.7,2.16,18.26,-10.55,-2.68
+W2,Bull Call Spread,232.63,212.88,2.21,15.24,-6.47,-2.74
+W3,Long Straddle,55.89,51.15,26.06,227.82,-139.14,-9.98
+W4,Bear Call Spread (x2),-465.25,-425.75,-4.42,-30.47,12.95,5.47
+W5,Collar productor,432.03,395.35,-0.02,-3.03,3.73,-0.07
+W6,Put Calendar Spread (x2),-73.58,-67.34,-4.61,80.62,25.64,-9.11", check.names = FALSE)
+griegas_equipo$Subyacente <- unname(c(A = "AAPL", G = "Oro", W = "WTI")[substr(griegas_equipo$id, 1, 1)])
+kable(griegas_equipo[, c("id", "Subyacente", "Estrategia", "Delta_USD_1pct", "Gamma_USD_1pct", "Vega_USD_1pp", "Theta_USD_dia", "Rho_USD_1pp")],
+      digits = 2, row.names = FALSE,
+      col.names = c("ID", "Subyacente", "Estrategia", "Delta (USD por 1%)", "Gamma (USD por 1%)", "Vega (USD por punto)", "Theta (USD por día)", "Rho (USD por punto)"),
+      caption = "Griegas de las 18 estrategias (LSEG, 12-oct-2026; estrategias modeladas)")
+
+netas <- griegas_equipo %>% group_by(Subyacente) %>%
+  summarise(across(c(Delta_USD_1pct, Gamma_USD_1pct, Vega_USD_1pp, Theta_USD_dia, Rho_USD_1pp), sum))
+kable(netas, digits = 1, col.names = c("Subyacente", "Delta", "Gamma", "Vega", "Theta", "Rho"),
+      caption = "Exposición neta si se mantuvieran las seis estrategias de cada subyacente (USD)")
+
+ggplot(tidyr::pivot_longer(griegas_equipo, c(Delta_USD_1pct, Vega_USD_1pp), names_to = "Griega", values_to = "valor") %>%
+         mutate(Griega = ifelse(Griega == "Delta_USD_1pct", "Delta (USD por 1% del subyacente)", "Vega (USD por punto de volatilidad)")),
+       aes(id, valor, fill = Subyacente)) + geom_col() + facet_wrap(~Griega, ncol = 1, scales = "free_y") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = gris) + scale_fill_manual(values = c(AAPL = azul, Oro = ambar, WTI = rojo)) +
+  labs(title = "Delta y Vega de las 18 estrategias", x = NULL, y = "USD", caption = "Fuente: LSEG, 12-oct-2026. Elaboración propia.") + tema
+```
+
+**Interpretación.** En los tres subyacentes los spreads direccionales tienen delta del signo esperado y vega pequeña; los
+straddles concentran gamma y vega positivas con theta muy negativa (el straddle de oro pierde US$266.55 al día por paso del
+tiempo); los short iron butterflies son lo opuesto: ganan con el tiempo y pierden si sube la volatilidad. Los calendar spreads
+tienen vega positiva aunque su gamma sea negativa, porque la opción larga vence después. Las cifras de oro son mayores por el
+tamaño del contrato (100 onzas a más de US$4,000), no porque el riesgo relativo sea mayor.
+
+# Operaciones ejecutadas, cotizaciones y estrategias modeladas
+
+Esta sección separa lo que se ejecutó en un simulador de lo que solo se cotizó o modeló, para no confundir ganancias
+potenciales con realizadas.
+
+```{r inventario}
+trades <- read.csv(text = "fecha,simbolo,tipo_operacion,cantidad,precio
+2026-09-30,AAPL,Stock: Buy at Market Open,100,330.8
+2026-09-30,AAPL2607V330,Option: Buy to Open at Market Open,1,3.2
+2026-10-27,AAPL2618L345,Option: Buy to Open at Limit,1,13.5")
+kable(trades, caption = "Investopedia, Trade History (exportado el 8-nov-2026)")
+
+inventario <- data.frame(
+  Plataforma = c("Investopedia", "Investopedia", "Investopedia", "Bloomberg OVME", "Bloomberg OVML", "Bloomberg OVML", "LSEG", "Equipo", "CME Group", "CME Group", "CME Group"),
+  Instrumento = c("100 acciones AAPL", "Put AAPL 330, vence 7-oct-2026", "Call AAPL 345, vence 18-dic-2026",
+                  "Bull Call Spread AAPL 340/350", "Bull Call Spread oro 4190/4400", "Bear Put Spread WTI 91.5/85",
+                  "18 estrategias (AAPL, oro, WTI)", "Bull Call Spread WTI 89.50/90", "Futuro NQZ6", "Opciones 6EZ6 (straddle 1.115)", "FedWatch"),
+  Fecha = c("30-sep-2026", "30-sep-2026", "27-oct-2026", "14-oct-2026", "14-oct-2026", "14-oct-2026", "12-oct-2026", "Octubre 2026", "27-oct-2026", "28-oct-2026", "27-oct-2026"),
+  Estado = c("Ejecutada, abierta", "Ejecutada, vencida sin valor", "Ejecutada, abierta", "Modelada (cotización)", "Modelada (cotización)", "Modelada (cotización)",
+             "Modelada", "Modelada (sin registro en Trade History)", "Cotización", "Cotización", "Consulta"),
+  `Costo (USD)` = c(33080, 320, 1350, 440, 6457.01, 2377.99, NA, NA, NA, 2262.50, NA),
+  `Valor al 6-nov (USD)` = c(100 * S0, 0, 100 * call_valor_6nov, NA, 3380, 1020, NA, NA, NA, NA, NA),
+  check.names = FALSE) %>%
+  mutate(`Resultado realizado (USD)` = c(NA, -320, NA, NA, NA, NA, NA, NA, NA, NA, NA),
+         `Resultado no realizado (USD)` = ifelse(Estado == "Ejecutada, abierta", `Valor al 6-nov (USD)` - `Costo (USD)`, NA),
+         `Resultado teórico (USD)` = ifelse(grepl("Modelada", Estado) & !is.na(`Valor al 6-nov (USD)`), `Valor al 6-nov (USD)` - `Costo (USD)`, NA))
+kable(inventario, digits = 2, row.names = FALSE,
+      caption = "Inventario: solo las tres primeras líneas son operaciones ejecutadas. El valor de oro y WTI usa el settle de CME del 27-oct-2026.")
+
+cuenta <- read.csv(text = "fecha_registro,efectivo,acciones,opciones,valor_cuenta
+2026-09-30,1000000,0,0,1000000
+2026-10-01,966600,33302,247,1000149
+2026-10-02,966600,33032,330,999962
+2026-10-03,966600,33369,140,1000109
+2026-10-06,966600,33289,105,999994
+2026-10-07,966600,33363,42,1000005
+2026-10-08,966601,33667,0,1000268
+2026-10-09,966601,34042,0,1000643
+2026-10-10,966601,33664,0,1000265
+2026-10-13,966601,34097,0,1000698
+2026-10-14,966601,34127,0,1000728
+2026-10-15,966601,34296,0,1000897
+2026-10-16,966601,34200,0,1000801
+2026-10-17,966601,34346,0,1000947
+2026-10-20,966601,34294,0,1000895
+2026-10-21,966601,33950,0,1000551
+2026-10-22,966601,34399,0,1001000
+2026-10-23,966601,34822,0,1001423
+2026-10-24,966601,34772.5,0,1001373.5
+2026-10-27,966601,34391,0,1000992
+2026-10-28,965251,34710,1525,1001486
+2026-10-29,965251,34383,1315,1000949
+2026-10-30,965251,34891,1600,1001742
+2026-10-31,965251,34463,1420,1001134
+2026-11-03,965251,33832,1110,1000193
+2026-11-04,965251,33190,615,999056
+2026-11-05,965251,34951,1450,1001652
+2026-11-06,965251,34417,1210,1000878
+2026-11-07,965251,34237,1125,1000613") %>% mutate(fecha_registro = as.Date(fecha_registro))
+ggplot(cuenta, aes(fecha_registro, valor_cuenta - 1e6)) + geom_col(fill = ifelse(cuenta$valor_cuenta >= 1e6, verde, rojo)) +
+  labs(title = "Investopedia: resultado acumulado de la cuenta", subtitle = "Cada registro refleja el cierre del día hábil anterior",
+       x = "Fecha de registro", y = "USD sobre el capital inicial de 1,000,000", caption = "Fuente: Investopedia, Performance History.") + tema
+```
+
+**Interpretación.** Al cierre del 6 de noviembre (registro del 7 de noviembre), la cuenta vale US$1,000,613: una ganancia de
+US$613 sobre US$1,000,000. Se compone de US$1,157 no realizados en las acciones, −US$225 no realizados en la call 345 y
+−US$320 realizados en la put 330, que funcionó como seguro (*protective put*) durante la primera semana de octubre y venció
+sin valor. Las estrategias de Bloomberg y LSEG son modeladas: su resultado teórico (oro −US$3,077 y WTI −US$1,358 con el settle
+del 27 de octubre) no es una pérdida realizada. El Bull Call Spread de WTI 89.50/90 no aparece en el Trade History, por lo que
+se clasifica como modelado. En Holdings, el "Current Price" de la call dice US$11.35, pero el valor total de US$1,125 corresponde
+a US$11.25 por acción; se usa este último.
+
+# Comparación de estrategias en Bloomberg (14 de octubre de 2026)
+
+```{r bloomberg}
+comp <- data.frame(Subyacente = c("AAPL", "Oro GCZ6", "WTI CLZ6"), Estrategia = c("Bull Call Spread", "Bull Call Spread", "Bear Put Spread"),
+                   Strikes = c("340 / 350", "4190 / 4400", "91.50 / 85.00"), Multiplicador = c(100, 100, 1000),
+                   `Costo (USD)` = c(440, 6457.01, 2377.99), `Ganancia máxima (USD)` = c(560, 14542.99, 4122.01),
+                   `Punto de equilibrio` = c(344.40, 4254.57, 89.12), `Valor al 27-oct (CME)` = c(NA, 3380, 1020), check.names = FALSE) %>%
+  mutate(`Ganancia / pérdida máxima` = `Ganancia máxima (USD)` / `Costo (USD)`)
+kable(comp, digits = 2, caption = "Estrategias modeladas en Bloomberg y su valor con el settle de CME del 27-oct-2026")
+```
+
+**Interpretación.** El spread de oro tenía la mejor relación ganancia/pérdida (2.25), pero requería que el oro subiera más de
+2% en 40 días; para el 27 de octubre el futuro había bajado a US$4,074.60 y el spread valía US$3,380 de US$6,457. El de WTI
+apostaba a una baja y el petróleo subió a US$99.90. Una mejor relación ganancia/pérdida no implica mayor probabilidad de ganar.
+
+```{r exportar, include = FALSE}
+# Resumen de resultados para el dashboard ejecutivo (resultados/resumen.json)
+dir.create("resultados", showWarnings = FALSE)
+if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
+  fecha_corte = format(fecha_corte), S0 = S0, q = q, n_obs = nrow(aapl), inicio = format(min(aapl$fecha)),
+  garch = list(mu = g_mu, omega = g_omega, alpha = g_alpha, beta = g_beta, nu = g_nu, pers = g_pers, vida_media = vida_media,
+               vol_hoy = vol_hoy, vol_lp = vol_lp, sigma_call = sigma_call, vol_hist_1a = vol_hist_1a,
+               serie = data.frame(f = format(aapl$fecha[-1]), v = round(sqrt(252 * h) / 100, 4))[seq(1, length(h), by = 3), ],
+               estructura = round(sqrt(252 * pron_h(1:252)) / 100, 4)),
+  mc = list(media = mean(ST), p05 = unname(quantile(ST, 0.05)), p95 = unname(quantile(ST, 0.95)), p_arriba = mean(ST > S0),
+            p_strike = mean(ST > call_k), p_equilibrio = mean(ST > equilibrio), equilibrio = equilibrio,
+            abanico = lapply(c(0.05, 0.25, 0.5, 0.75, 0.95), function(pp) round(apply(S_mc, 1, quantile, pp), 2))),
+  call = list(valor_mercado = call_valor_6nov, iv = iv_mercado, garch_valor = crr(S0, call_k, r_corto, q, sigma_call, T_call),
+              hist_valor = crr(S0, call_k, r_corto, q, vol_hist_1a, T_call), r = r_corto, T = T_call,
+              sens = data.frame(s = sens$sigma, v = round(sens$valor, 3))),
+  conv = list(K = conv_K, n = conv_n, sigma = conv_sigma, rf = conv_rf, y = conv_y, opcion = conv_opcion, bono = conv_bono, cupon = conv_cupon,
+              ahorro = conv_ahorro, vp_ahorro = vp_ahorro, opciones_total = conv_opcion * n_bonos, K2 = K2, c1 = c1, c2 = c2,
+              cs_total = cs_total, acc_conv = acc_conv),
+  swaps = list(eurusd = eurusd, usd_n = ccs_usd, cupon_eur = ccs_cupon_eur, ccs = ccs_tasa_usd, directo = directo_usd, irs_fijo = irs_fijo,
+               spread_flot = irs_spread, dv01 = dv01, fwd7 = fwd[ccs_T], vp_sin = vp_sin, vp_con = vp_con, esc = esc, esc_irs = esc_irs,
+               zero_usd = -log(cu$D) / (1:10), zero_eur = -log(ce$D) / (1:10)),
+  griegas = griegas_equipo, netas = netas, cuenta = cuenta, inventario = inventario, comp = comp
+), "resultados/resumen.json", auto_unbox = TRUE, digits = 8, dataframe = "rows", na = "null")
+```
+
+# Conclusiones
+
+1. **Volatilidad.** AAPL tiene colas pesadas (t con `r round(g_nu, 1)` grados de libertad) y volatilidad persistente
+   (α + β = `r round(g_pers, 3)`). Al 6 de noviembre la volatilidad condicional es `r pct(vol_hoy, 1)` contra `r pct(vol_lp, 1)` de
+   largo plazo. Usar la volatilidad de un día para una opción de varias semanas lleva a errores de valuación; la volatilidad
+   correcta es el promedio esperado durante la vida de la opción.
+2. **Valuación contra mercado.** La call AAPL 345 vale `r usd(call_valor_6nov)` en el mercado, con una volatilidad implícita de
+   `r pct(iv_mercado, 1)`; el árbol con la volatilidad de GARCH da `r usd(crr(S0, call_k, r_corto, q, sigma_call, T_call))`. La diferencia
+   entre ambos modelos es la señal de volatilidad: indica si la opción se ve cara o barata, no una ganancia asegurada.
+3. **Riesgo de la posición.** Monte Carlo da `r pct(mean(ST > equilibrio), 0)` de probabilidad de recuperar la prima pagada al
+   vencimiento. La posición del equipo gana US$613 en total; la put venció sin valor y cumplió su función de seguro.
+4. **Bono convertible.** El cupón baja de `r pct(conv_y)` a `r pct(conv_cupon)`, pero el valor presente de esa reducción es igual
+   al valor de las opciones que se entregan: a precio justo, el VPN para los accionistas es cero. El call spread cuesta
+   `r musd(cs_total)` y tampoco crea valor; solo evita dilución dentro de un rango.
+5. **Swaps.** Emitir en euros y convertir con un CCS cuesta `r pct(ccs_tasa_usd)`, `r pb(directo_usd - ccs_tasa_usd)` menos que
+   un bono directo en dólares, y la cobertura neutraliza el riesgo cambiario. El IRS convierte ese costo en SOFR +
+   `r pb(irs_spread)`: no elimina el riesgo de tasas, lo transforma. Ambos swaps valen cero al contratarse; su valor posterior
+   depende de las curvas, no de una ganancia de entrada.
+6. **Estrategias.** Los spreads limitan pérdida y ganancia desde el inicio, pero su resultado depende de la dirección del
+   subyacente: los de oro y WTI perdieron valor porque el mercado se movió en contra. Las griegas muestran que combinar
+   posiciones largas y cortas cambia el perfil de riesgo, no lo elimina.
+
+# Limitaciones
+
+- GARCH(1,1) simétrico no captura que las caídas aumenten más la volatilidad que las subidas (GJR-GARCH o EGARCH sí).
+- Los swaps se valúan con cupón anual y curvas SOFR y €STR de 2 y 3 de noviembre; el diferencial de crédito de Apple y el
+  basis EUR/USD son supuestos.
+- El convertible y el call spread usan Black-Scholes europeo con volatilidad constante; no incluyen costos de emisión ni
+  cláusulas contractuales.
+- Las primas de Bloomberg, LSEG y CME son de sus fechas originales y no se comparan directamente con el corte del 6 de noviembre.
+- Material académico; no constituye recomendación de inversión.
+
+# Fuentes y fechas de los datos
+
+```{r fuentes}
+kable(data.frame(
+  Dato = c("Precios diarios de AAPL", "Treasuries (1, 2, 3, 5, 7 y 10 años)", "Curva SOFR", "Curva €STR", "EUR/USD",
+           "Dividendo y resultados de Apple", "Operaciones de Investopedia", "Bull Call Spread AAPL, oro y WTI", "18 estrategias y griegas",
+           "Settle de opciones de oro y WTI", "Opciones 6EZ6", "FedWatch y NQZ6", "Diferenciales de crédito y basis"),
+  Fecha = c("6-nov-2021 a 6-nov-2026", "6-nov-2026", "2-nov-2026", "3-nov-2026", "6-nov-2026", "Q4 FY2026 (30-oct-2026)",
+            "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "28-oct-2026", "27-oct-2026", "Supuesto"),
+  Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "BlueGamma", "TradingNews", "Apple, 10-K FY2026",
+             "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG (Tarea 3 del equipo)",
+             "CME Group, Settlements", "CME Group", "CME Group", "Equipo (40 pb, 45 pb, −10 pb)")),
+  caption = "Cada dato conserva su fecha original")
+```

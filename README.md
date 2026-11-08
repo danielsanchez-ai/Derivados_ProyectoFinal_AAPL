@@ -1,1 +1,66 @@
-# Derivados_ProyectoFinal_APPL
+# Proyecto Final · Derivados y Administración de Riesgos
+
+**Equipo 7 · Productos Derivados y Administración de Riesgos Corporativos · EGADE Business School**
+Fecha de corte de los datos de mercado: **6 de noviembre de 2026**.
+
+Análisis de Apple Inc. (AAPL) con volatilidad GARCH, simulación Monte Carlo, árboles binomiales, un bono convertible
+(réplica del caso Molson Coors), swaps de divisas y de tasas, 18 estrategias de opciones sobre AAPL, oro y WTI, y las
+operaciones realizadas en simuladores.
+
+## Contenido
+
+| Ruta | Qué es |
+|---|---|
+| `Proyecto_Final_Derivados.Rmd` | Reporte principal en R Markdown. Genera el HTML y `resultados/resumen.json`. |
+| `Proyecto_Final_Derivados.html` | Reporte compilado. |
+| `dashboard/dashboard_ejecutivo.html` | Dashboard ejecutivo; lee las cifras de `resultados/resumen.json`. |
+| `datos/aapl_yahoo.csv` | Precios diarios de AAPL (Yahoo Finance, 6-nov-2021 a 6-nov-2026). |
+| `datos/griegas_equipo.csv` | Griegas de las 18 estrategias (LSEG, 12-oct-2026). También vienen incluidas dentro del Rmd. |
+| `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
+| `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
+| `evidencias/` | Capturas de Investopedia, CME Group y Bloomberg. |
+| `presentacion/` | Guion del screencast con tiempos. La presentación se exporta a PDF o PowerPoint y se agrega aquí. |
+
+## Cómo reproducir
+
+1. Abrir `Proyecto_Final_Derivados.Rmd` en RStudio con este repositorio como directorio de trabajo.
+2. Instalar los paquetes una vez:
+   ```r
+   install.packages(c("dplyr", "tidyr", "ggplot2", "knitr", "scales", "zoo", "jsonlite", "quantmod"))
+   ```
+3. Presionar **Knit**. El Rmd usa `datos/aapl_yahoo.csv`; si el archivo no existe, lo descarga de Yahoo Finance.
+
+El GARCH(1,1) con distribución t se estima con código propio por máxima verosimilitud, así que no requiere `rugarch`.
+Si `rugarch` está instalado, el reporte lo usa para validar los parámetros.
+
+## Fuentes y fechas
+
+| Dato | Fecha | Fuente |
+|---|---|---|
+| Precios diarios de AAPL | 6-nov-2021 a 6-nov-2026 | Yahoo Finance |
+| Treasuries | 6-nov-2026 | Forbes Advisor |
+| Curvas SOFR y €STR | 2 y 3-nov-2026 | BlueGamma |
+| EUR/USD | 6-nov-2026 | TradingNews |
+| Operaciones | 30-sep a 6-nov-2026 | Investopedia |
+| Spreads de AAPL, oro y WTI | 14-oct-2026 | Bloomberg OVME / OVML |
+| 18 estrategias y griegas | 12-oct-2026 | LSEG |
+| Settle de oro y WTI, 6EZ6, FedWatch, NQZ6 | 27 y 28-oct-2026 | CME Group |
+| Diferenciales de Apple y basis EUR/USD | — | Supuestos del equipo |
+
+## Operaciones: ejecutadas y modeladas
+
+Solo tres operaciones se ejecutaron, todas en Investopedia: 100 acciones de AAPL (30-sep), una put AAPL 330 que venció
+sin valor el 7-oct y una call AAPL 345 con vencimiento el 18-dic. Las estrategias de Bloomberg y LSEG son modeladas; su
+resultado es teórico, no realizado.
+
+## Seguridad
+
+El proyecto no usa claves de API ni credenciales: Yahoo Finance se consulta sin clave. El `.gitignore` excluye archivos
+de sesión de R y Jupyter (`.Rhistory`, `.RData`, `.Renviron`, `.ipynb_checkpoints`) y cualquier `.env`.
+
+## Uso de inteligencia artificial
+
+El código, el dashboard y la redacción se elaboraron con apoyo de Claude (Anthropic), con datos, operaciones y decisiones
+del equipo. El equipo revisó las cifras contra sus fuentes.
+
+*Material académico; no constituye recomendación de inversión.*

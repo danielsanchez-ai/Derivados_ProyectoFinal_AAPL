@@ -48,3 +48,27 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+
+# Proyecto Equipo 7
+# Sesiones y configuración local de R / RStudio
+.Rhistory
+.RData
+.Rproj.user/
+.Renviron
+*.Rproj
+# Python / Jupyter
+.ipynb_checkpoints/
+__pycache__/
+# Secretos y variables de entorno
+.env
+*.env
+*secret*
+*token*
+*.pem
+*.key
+# Sistema
+.DS_Store
+Thumbs.db
+# Archivos temporales de knitr
+*_cache/
+*_files/
