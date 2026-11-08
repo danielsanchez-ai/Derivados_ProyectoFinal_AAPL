@@ -7,6 +7,16 @@ Análisis de Apple Inc. (AAPL) con volatilidad GARCH, simulación Monte Carlo, �
 (réplica del caso Molson Coors), swaps de divisas y de tasas, 18 estrategias de opciones sobre AAPL, oro y WTI, y las
 operaciones realizadas en simuladores.
 
+## Entrega
+
+| Entregable | Liga |
+|---|---|
+| Página del proyecto | [https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/) |
+| Reporte completo (HTML) | [Abrir reporte](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/Proyecto_Final_Derivados.html) |
+| Dashboard ejecutivo | [Abrir dashboard](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/dashboard/dashboard_ejecutivo.html) |
+| Presentación (PDF) | [Abrir presentación](presentacion/Presentacion_Proyecto_Final_Equipo7.pdf) |
+| Código fuente | [`Proyecto_Final_Derivados.Rmd`](Proyecto_Final_Derivados.Rmd) |
+
 ## Contenido
 
 | Ruta | Qué es |
@@ -19,7 +29,8 @@ operaciones realizadas en simuladores.
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
 | `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
 | `evidencias/` | Capturas de Investopedia, CME Group y Bloomberg. |
-| `presentacion/` | Guion del screencast con tiempos. La presentación se exporta a PDF o PowerPoint y se agrega aquí. |
+| `presentacion/` | Presentación en PDF y guion de exposición con tiempos. |
+| `index.html` | Página de inicio del proyecto (GitHub Pages). |
 
 ## Cómo reproducir
 

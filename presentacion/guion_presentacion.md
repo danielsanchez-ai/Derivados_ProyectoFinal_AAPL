@@ -1,8 +1,8 @@
-# Guion del screencast (≈10 minutos)
+# Guion de la presentación (≈10 minutos)
 
 Cada bloque indica el tiempo, qué mostrar en pantalla y qué decir. El texto es una guía: díganlo con sus palabras. Las mismas notas están en la presentación (notas del orador).
 
-**Antes de grabar:** cierren pestañas con correos o datos personales; en Investopedia muestren solo Holdings y Trade History; tengan abiertos la presentación, el dashboard y el repositorio.
+**Antes de presentar:** tengan abiertos la presentación, el dashboard y el repositorio; en Investopedia muestren solo Holdings y Trade History.
 
 ## 1. 0:00–0:30
 

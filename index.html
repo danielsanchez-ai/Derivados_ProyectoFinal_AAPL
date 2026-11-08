@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proyecto Final Derivados · Equipo 7</title>
+<style>
+:root{--bg:#F7F6F2;--card:#FFFFFF;--ink:#14213D;--text:#1F2937;--muted:#5B6575;--line:#E2DED5;--accent:#2B5AA0;--warm:#B45309;--hero:#14213D;--heroText:#F4F1EA;--heroMuted:#C9D3E3;--heroAccent:#F2A541}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F172A;--card:#18233B;--ink:#F4F1EA;--text:#E5E7EB;--muted:#A9B4C6;--line:#2A3757;--accent:#8DB4F0;--warm:#F2A541;--hero:#0B1224}}
+:root[data-theme="dark"]{--bg:#0F172A;--card:#18233B;--ink:#F4F1EA;--text:#E5E7EB;--muted:#A9B4C6;--line:#2A3757;--accent:#8DB4F0;--warm:#F2A541;--hero:#0B1224}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--hero);color:var(--heroText);padding:56px 16px 48px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+.eyebrow{color:var(--heroAccent);font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0 0 12px}
+h1{font-size:clamp(28px,5vw,44px);line-height:1.1;margin:0 0 14px}
+header p{color:var(--heroMuted);margin:0;max-width:720px}
+main{padding:40px 0 56px}
+h2{color:var(--ink);font-size:20px;margin:0 0 16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px;margin-bottom:40px}
+a.card{display:flex;flex-direction:column;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;text-decoration:none;color:var(--text);transition:border-color .15s,transform .15s}
+a.card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.card b{color:var(--ink);font-size:18px}
+.card span{color:var(--muted);font-size:14px}
+.card em{color:var(--accent);font-style:normal;font-weight:600;font-size:14px;margin-top:auto;padding-top:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:40px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+.kpi .v{font-size:24px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:13px;color:var(--muted)}
+footer{border-top:1px solid var(--line);padding:20px 0;color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<p class="eyebrow">Equipo 7 · EGADE Business School</p>
+<h1>Derivados y administración de riesgos: Apple (AAPL)</h1>
+<p>Volatilidad GARCH, valuación de opciones, bono convertible, swaps de divisas y de tasas, 18 estrategias y operaciones en simulador. Datos al cierre del 6 de noviembre de 2026.</p>
+</div></header>
+<main class="wrap">
+<h2>Entregables</h2>
+<div class="grid">
+<a class="card" href="Proyecto_Final_Derivados.html"><b>Reporte completo</b><span>R Markdown compilado: código, tablas, gráficas, conclusiones y fuentes.</span><em>Abrir reporte →</em></a>
+<a class="card" href="dashboard/dashboard_ejecutivo.html"><b>Dashboard ejecutivo</b><span>Resumen visual con las mismas cifras que exporta el reporte.</span><em>Abrir dashboard →</em></a>
+<a class="card" href="presentacion/Presentacion_Proyecto_Final_Equipo7.pdf"><b>Presentación</b><span>12 diapositivas en PDF, con guion de exposición.</span><em>Abrir PDF →</em></a>
+<a class="card" href="https://github.com/danielsanchez-ai/Derivados_ProyectoFinal_AAPL"><b>Código y datos</b><span>Repositorio con el Rmd, datos, notebook y evidencias.</span><em>Ver en GitHub →</em></a>
+</div>
+<h2>Cifras clave</h2>
+<div class="kpis">
+<div class="kpi"><div class="v">0.978</div><div class="l">Persistencia GARCH (α + β)</div></div>
+<div class="kpi"><div class="v">29.5%</div><div class="l">Volatilidad GARCH para la call</div></div>
+<div class="kpi"><div class="v">13.18 vs 11.25</div><div class="l">Call 345: árbol GARCH vs mercado (US$)</div></div>
+<div class="kpi"><div class="v">VPN = 0</div><div class="l">Convertible a precio justo</div></div>
+<div class="kpi"><div class="v">5.02%</div><div class="l">Costo en USD con CCS (directo 5.14%)</div></div>
+<div class="kpi"><div class="v">SOFR + 58 pb</div><div class="l">Costo flotante con IRS</div></div>
+<div class="kpi"><div class="v">US$1,000,613</div><div class="l">Cuenta Investopedia al 6-nov</div></div>
+</div>
+</main>
+<footer><div class="wrap">Material académico; no constituye recomendación de inversión.</div></footer>
+</body>
+</html>
