@@ -60,9 +60,10 @@ Si `rugarch` está instalado, el reporte lo usa para validar los parámetros.
 
 ## Operaciones: ejecutadas y modeladas
 
-Solo tres operaciones se ejecutaron, todas en Investopedia: 100 acciones de AAPL (30-sep), una put AAPL 330 que venció
-sin valor el 7-oct y una call AAPL 345 con vencimiento el 18-dic. Las estrategias de Bloomberg y LSEG son modeladas; su
-resultado es teórico, no realizado.
+En Investopedia el equipo armó una posición protegida en AAPL: 100 acciones (30-sep), una put AAPL 330 como seguro
+durante la primera semana de octubre (venció el 7-oct) y una call AAPL 345 con vencimiento el 18-dic para aprovechar el
+alza. Además cotizó tres spreads en Bloomberg (AAPL, oro y WTI) y diseñó 18 estrategias con sus griegas en LSEG. Estas
+últimas se reportan como modeladas: su resultado es teórico, no realizado.
 
 ## Seguridad
 

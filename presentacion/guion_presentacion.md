@@ -62,7 +62,7 @@ Cada bloque indica el tiempo, qué mostrar en pantalla y qué decir. El texto es
 
 **En pantalla:** Diapositiva 10, luego la captura de Holdings (evidencias/investopedia) y la tabla de operaciones del dashboard.
 
-**Guion:** En el simulador ejecutamos solo tres operaciones: 100 acciones de Apple, una put 330 como seguro, que venció sin valor, y la call 345 de diciembre. Al cierre del 6 de noviembre la cuenta vale 1,000,613 dólares: 1,157 de ganancia no realizada en acciones, menos 225 en la call y menos 320 realizados en la put. Separamos lo ejecutado de lo modelado: los spreads de oro y WTI cotizados en Bloomberg tienen un resultado teórico negativo, pero no son pérdidas realizadas. Aquí podemos mostrar la pantalla de Holdings.
+**Guion:** En el simulador armamos una posición protegida en Apple: compramos 100 acciones, las aseguramos con una put 330 durante la primera semana de octubre y después compramos la call 345 de diciembre para aprovechar el alza. Además cotizamos tres spreads en Bloomberg y diseñamos 18 estrategias en LSEG. Al cierre del 6 de noviembre la cuenta vale 1,000,613 dólares: 1,157 de ganancia no realizada en acciones, menos 225 en la call y menos 320 realizados en la put. Separamos lo ejecutado de lo modelado: los spreads de oro y WTI cotizados en Bloomberg tienen un resultado teórico negativo, pero no son pérdidas realizadas. Aquí podemos mostrar la pantalla de Holdings.
 
 ## 11. 8:30–9:15
 

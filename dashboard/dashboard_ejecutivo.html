@@ -317,7 +317,7 @@ function render(){
 }
 render._ops=function(){
   const cta=D.cuenta,last=cta[cta.length-1];
-  $("kOp").innerHTML=`<p><b>Solo tres operaciones se ejecutaron, todas en Investopedia.</b> La cuenta vale ${usd(last.valor_cuenta,0)} al cierre del 6 de noviembre: +$1,157 no realizados en acciones, −$225 no realizados en la call y −$320 realizados en la put 330, que venció sin valor tras proteger la primera semana de octubre. Lo demás son cotizaciones o estrategias modeladas.</p>`;
+  $("kOp").innerHTML=`<p><b>En Investopedia armamos una posición protegida en AAPL: acciones, una put protectora y una call para aprovechar el alza.</b> La cuenta vale ${usd(last.valor_cuenta,0)} al cierre del 6 de noviembre: +$1,157 no realizados en acciones, −$225 no realizados en la call y −$320 realizados en la put 330, que cumplió su función de seguro durante la primera semana de octubre. Además cotizamos tres spreads en Bloomberg (AAPL, oro y WTI) y diseñamos 18 estrategias con sus griegas en LSEG; su resultado se reporta como teórico.</p>`;
   $("sOp").innerHTML=stat([["Valor de la cuenta",usd(last.valor_cuenta,0),"registro del 7-nov",last.valor_cuenta>=1e6?"pos":"neg"],["100 acciones AAPL","+$1,157","compradas a $330.80","pos"],
     ["Call AAPL 345","-$225","comprada a $13.50; vale $11.25","neg"],["Put AAPL 330","-$320","realizado; venció el 7-oct","neg"]]);
   mk("chCta",{type:"bar",data:{labels:cta.map(r=>r.fecha_registro.slice(5)),datasets:[{label:"Resultado acumulado (USD)",data:cta.map(r=>r.valor_cuenta-1e6),
