@@ -29,7 +29,7 @@ operaciones realizadas en simuladores.
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
 | `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
 | `evidencias/` | Capturas de Investopedia, CME Group y Bloomberg. |
-| `presentacion/` | Presentación en PDF y guion de exposición con tiempos. |
+| `presentacion/` | Presentación en PDF (12 diapositivas). |
 | `index.html` | Página de inicio del proyecto (GitHub Pages). |
 
 ## Cómo reproducir

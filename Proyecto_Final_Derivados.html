@@ -1819,11 +1819,11 @@ fuentes de riesgo.</li>
 <p><strong>Fuente y justificación.</strong> Se usa Yahoo Finance porque
 ofrece una serie continua de precios ajustados, fácil de reproducir en
 R. El periodo es de cinco años (2021-11-08 a 2026-11-06, 1255
-observaciones): con dos años el GARCH no identifica bien la persistencia
-(en la versión anterior ω no era significativo y la persistencia era de
-0.78). Los rendimientos se calculan con precios ajustados; las
-valuaciones usan el cierre sin ajustar del 6 de noviembre (US$342.37),
-que coincide con el precio de Investopedia.</p>
+observaciones): con solo dos años el GARCH no identifica bien la
+persistencia (ω deja de ser significativo y la persistencia cae a 0.78),
+así que se usa una muestra más larga. Los rendimientos se calculan con
+precios ajustados; las valuaciones usan el cierre sin ajustar del 6 de
+noviembre (US$342.37), que coincide con el precio de Investopedia.</p>
 <div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a>r <span class="ot">&lt;-</span> <span class="fu">na.omit</span>(aapl<span class="sc">$</span>rend)</span>
 <span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="fu">kable</span>(<span class="fu">data.frame</span>(</span>
 <span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">Indicador =</span> <span class="fu">c</span>(<span class="st">&quot;Rendimiento promedio diario&quot;</span>, <span class="st">&quot;Volatilidad diaria&quot;</span>, <span class="st">&quot;Volatilidad anualizada&quot;</span>, <span class="st">&quot;Asimetría&quot;</span>, <span class="st">&quot;Curtosis&quot;</span>,</span>
@@ -2238,9 +2238,9 @@ AAPL 345 contra el precio de mercado</h1>
 para la vida de la opción (29.5%), el árbol vale US$13.18 por acción,
 contra US$11.25 en el mercado. La volatilidad implícita del precio de
 mercado es 25.4%: GARCH espera más movimiento del que cobra el mercado,
-así que la opción se ve barata. La versión anterior del reporte usaba la
-volatilidad de un solo día (33.6%) para una opción de 42 días, lo que
-sobreestimaba su valor. La prima pagada el 27 de octubre (US$13.50) es
+así que la opción se ve barata. Usar la volatilidad de un solo día
+(33.6% en un día de alta volatilidad) para una opción de varias semanas
+sobreestimaría su valor. La prima pagada el 27 de octubre (US$13.50) es
 de otra fecha y no se compara directamente.</p>
 </div>
 <div id="bono-convertible-hipotético-de-apple" class="section level1" number="7">
@@ -2370,12 +2370,11 @@ inversionistas (US$2,181.7 millones). No es coincidencia: el cupón se
 calcula para que bono más opción valgan US$1,000. Si la opción está
 valuada a precio justo, el VPN para los accionistas actuales es cero;
 Apple paga en acciones futuras lo que deja de pagar en intereses.</p>
-<p>La versión anterior restaba el costo del call spread a ese valor
-presente y obtenía una “diferencia positiva” de US$1,269.90 millones;
-esa cifra se eliminó porque compara un pago con su propia
-contraprestación. El convertible conviene por otras razones: menor
-salida de efectivo, una volatilidad implícita que el mercado pague por
-encima de su valor, ventajas fiscales o una señal de confianza en la
+<p>Restar el costo del call spread a ese valor presente y presentar la
+diferencia como ganancia sería un error: compararía un pago con su
+propia contraprestación. El convertible conviene por otras razones:
+menor salida de efectivo, una volatilidad implícita que el mercado pague
+por encima de su valor, ventajas fiscales o una señal de confianza en la
 acción.</p>
 </div>
 <div id="call-spread-para-mitigar-la-dilución" class="section level2" number="7.2">
@@ -2671,8 +2670,8 @@ cero al inicio)</caption>
 </table>
 <p><strong>Interpretación.</strong> Los cupones con CCS (US$279.6
 millones al año) son mayores que los cupones en euros convertidos al
-tipo de cambio de hoy, y la versión anterior concluía que el CCS “es más
-caro en todos los escenarios”. Esa comparación usaba un tipo de cambio
+tipo de cambio de hoy, lo que haría pensar que el CCS “es más caro en
+todos los escenarios”. Esa comparación supone un tipo de cambio
 constante. El mercado ya descuenta que el euro se aprecie por el
 diferencial de tasas: el forward a 7 años es 1.2192. Además, al
 vencimiento Apple tendría que comprar €5,000 millones a ese precio. Con
@@ -2857,15 +2856,15 @@ nivel</caption>
 </tr>
 </tbody>
 </table>
-<p><strong>Interpretación.</strong> La versión anterior suponía que
-Apple recibía 5.02% en el IRS, la misma tasa que paga, y por eso los
-flujos fijos se cancelaban. El swap SOFR de mercado a 7 años está en
-4.44%, así que el costo flotante correcto es <strong>SOFR + 58
-pb</strong>. Al contratarse, el IRS vale cero. Si SOFR baja 100 pb gana
-US$355 millones; si sube 100 pb pierde US$332 millones. Los dos métodos
-de Hull (bonos y FRAs) dan el mismo valor, y el DV01 es de US$3,432,575
-por punto base. El IRS no elimina el riesgo de tasas: lo cambia de
-riesgo de valor a riesgo de flujo.</p>
+<p><strong>Interpretación.</strong> El IRS no puede recibir 5.02%, la
+tasa que paga Apple, porque entonces los flujos fijos se cancelarían por
+construcción. El swap SOFR de mercado a 7 años está en 4.44%, así que el
+costo flotante correcto es <strong>SOFR + 58 pb</strong>. Al
+contratarse, el IRS vale cero. Si SOFR baja 100 pb gana US$355 millones;
+si sube 100 pb pierde US$332 millones. Los dos métodos de Hull (bonos y
+FRAs) dan el mismo valor, y el DV01 es de US$3,432,575 por punto base.
+El IRS no elimina el riesgo de tasas: lo cambia de riesgo de valor a
+riesgo de flujo.</p>
 </div>
 </div>
 <div id="portafolio-de-18-estrategias-de-opciones-y-griegas" class="section level1" number="9">

@@ -289,7 +289,7 @@ function render(){
   $("tVpn").innerHTML="<tbody>"+[["Reducción nominal de intereses al año",mm(V.ahorro,1)],["Valor presente de la reducción (6 años)",mm(V.vp_ahorro,1)],
     ["Valor de las opciones entregadas",mm(V.opciones_total,1)],["VPN para los accionistas actuales",mm(V.vp_ahorro-V.opciones_total,1)]]
     .map((r,i)=>`<tr${i===3?' class="hl"':""}><td>${r[0]}</td><td class="n">${r[1]}</td></tr>`).join("")+
-    `</tbody><tfoot><tr><td colspan="2" style="font-size:.78rem;color:var(--muted)">La versión anterior restaba el call spread y reportaba una "diferencia positiva" de $1,269.90M; se eliminó porque compara un pago con su propia contraprestación.</td></tr></tfoot>`;
+    `</tbody><tfoot><tr><td colspan="2" style="font-size:.78rem;color:var(--muted)">Restar el call spread y presentar la diferencia como ganancia compararía un pago con su propia contraprestación.</td></tr></tfoot>`;
 
   // Swaps
   const e20=S.esc[S.esc.length-1];

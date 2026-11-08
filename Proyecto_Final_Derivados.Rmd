@@ -138,8 +138,8 @@ ggplot(aapl, aes(fecha, ajustado)) + geom_line(color = azul, linewidth = 0.6) +
 
 **Fuente y justificación.** Se usa Yahoo Finance porque ofrece una serie continua de precios ajustados, fácil de
 reproducir en R. El periodo es de cinco años (`r format(min(aapl$fecha))` a `r format(max(aapl$fecha))`, `r nrow(aapl)`
-observaciones): con dos años el GARCH no identifica bien la persistencia (en la versión anterior ω no era significativo y
-la persistencia era de 0.78). Los rendimientos se calculan con precios ajustados; las valuaciones usan el cierre sin
+observaciones): con solo dos años el GARCH no identifica bien la persistencia (ω deja de ser significativo y la persistencia
+cae a 0.78), así que se usa una muestra más larga. Los rendimientos se calculan con precios ajustados; las valuaciones usan el cierre sin
 ajustar del 6 de noviembre (`r usd(S0)`), que coincide con el precio de Investopedia.
 
 ```{r rendimientos}
@@ -325,7 +325,7 @@ ggplot(sens, aes(sigma, valor)) + geom_line(color = azul, linewidth = 1) +
 **Interpretación.** Con la volatilidad que GARCH espera para la vida de la opción (`r pct(sigma_call, 1)`), el árbol vale
 `r usd(crr(S0, call_k, r_corto, q, sigma_call, T_call))` por acción, contra `r usd(call_valor_6nov)` en el mercado. La
 volatilidad implícita del precio de mercado es `r pct(iv_mercado, 1)`: `r ifelse(sigma_call > iv_mercado, "GARCH espera más movimiento del que cobra el mercado, así que la opción se ve barata", "el mercado cobra más volatilidad de la que espera GARCH, así que la opción se ve cara")`.
-La versión anterior del reporte usaba la volatilidad de un solo día (33.6%) para una opción de 42 días, lo que sobreestimaba
+Usar la volatilidad de un solo día (33.6% en un día de alta volatilidad) para una opción de varias semanas sobreestimaría
 su valor. La prima pagada el 27 de octubre (US$13.50) es de otra fecha y no se compara directamente.
 
 # Bono convertible hipotético de Apple
@@ -377,8 +377,8 @@ inversionistas (`r musd(conv_opcion * n_bonos)`). No es coincidencia: el cupón 
 US$1,000. Si la opción está valuada a precio justo, el VPN para los accionistas actuales es cero; Apple paga en acciones
 futuras lo que deja de pagar en intereses.
 
-La versión anterior restaba el costo del call spread a ese valor presente y obtenía una "diferencia positiva" de
-US$1,269.90 millones; esa cifra se eliminó porque compara un pago con su propia contraprestación. El convertible conviene por
+Restar el costo del call spread a ese valor presente y presentar la diferencia como ganancia sería un error: compararía un
+pago con su propia contraprestación. El convertible conviene por
 otras razones: menor salida de efectivo, una volatilidad implícita que el mercado pague por encima de su valor, ventajas
 fiscales o una señal de confianza en la acción.
 
@@ -448,8 +448,8 @@ kable(rbind(flujos, data.frame(Año = "VP", `Sin CCS, a tipo de cambio forward` 
 ```
 
 **Interpretación.** Los cupones con CCS (`r musd(ccs_usd * ccs_tasa_usd)` al año) son mayores que los cupones en euros
-convertidos al tipo de cambio de hoy, y la versión anterior concluía que el CCS "es más caro en todos los escenarios". Esa
-comparación usaba un tipo de cambio constante. El mercado ya descuenta que el euro se aprecie por el diferencial de tasas: el
+convertidos al tipo de cambio de hoy, lo que haría pensar que el CCS "es más caro en todos los escenarios". Esa comparación
+supone un tipo de cambio constante. El mercado ya descuenta que el euro se aprecie por el diferencial de tasas: el
 forward a 7 años es `r round(fwd[ccs_T], 4)`. Además, al vencimiento Apple tendría que comprar €5,000 millones a ese precio.
 Con el tipo de cambio forward, ambas alternativas tienen casi el mismo valor presente (`r musd(vp_sin * 1e6)` contra
 `r musd(vp_con * 1e6)`); la diferencia sale del basis y del diferencial de crédito. El CCS no encarece la deuda: fija el
@@ -499,8 +499,8 @@ flujo_sofr <- data.frame(SOFR = c(0.025, 0.035, 0.045, 0.055, 0.065)) %>%
 kable(flujo_sofr, digits = 1, caption = "Pago anual en millones de USD si SOFR se mantuviera en cada nivel")
 ```
 
-**Interpretación.** La versión anterior suponía que Apple recibía 5.02% en el IRS, la misma tasa que paga, y por eso los
-flujos fijos se cancelaban. El swap SOFR de mercado a 7 años está en `r pct(irs_fijo)`, así que el costo flotante correcto
+**Interpretación.** El IRS no puede recibir 5.02%, la tasa que paga Apple, porque entonces los flujos fijos se cancelarían
+por construcción. El swap SOFR de mercado a 7 años está en `r pct(irs_fijo)`, así que el costo flotante correcto
 es **SOFR + `r pb(irs_spread)`**. Al contratarse, el IRS vale cero. Si SOFR baja 100 pb gana
 `r musd(esc_irs[[2]][2] * 1e6, 0)`; si sube 100 pb pierde `r musd(-esc_irs[[2]][6] * 1e6, 0)`. Los dos métodos de Hull (bonos y
 FRAs) dan el mismo valor, y el DV01 es de `r usd(dv01, 0)` por punto base. El IRS no elimina el riesgo de tasas: lo cambia de
