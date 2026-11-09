@@ -14,6 +14,7 @@ operaciones realizadas en simuladores.
 | Página del proyecto | [https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/) |
 | Reporte completo (HTML) | [Abrir reporte](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/Proyecto_Final_Derivados.html) |
 | Dashboard ejecutivo | [Abrir dashboard](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/dashboard/dashboard_ejecutivo.html) |
+| Calculadora bono + opción y call spread | [Abrir calculadora](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/calculadora/calculadora_convertible.html) |
 | Presentación (PDF) | [Abrir presentación](presentacion/Presentacion_Proyecto_Final_Equipo7.pdf) |
 | Código fuente | [`Proyecto_Final_Derivados.Rmd`](Proyecto_Final_Derivados.Rmd) |
 
@@ -29,6 +30,7 @@ operaciones realizadas en simuladores.
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
 | `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
 | `evidencias/` | Capturas de Investopedia, CME Group y Bloomberg. |
+| `calculadora/calculadora_convertible.html` | Calculadora interactiva del convertible (bono + opción) y del call spread, con parámetros editables. |
 | `presentacion/` | Presentación en PDF (12 diapositivas). |
 | `index.html` | Página de inicio del proyecto (GitHub Pages). |
 

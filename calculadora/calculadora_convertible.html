@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculadora Convertible · Equipo 7</title>
+<style>
+:root{--bg:#F7F6F2;--card:#FFFFFF;--ink:#14213D;--text:#1F2937;--muted:#5B6575;--line:#E2DED5;--accent:#2B5AA0;--accent2:#B45309;--good:#2E7D4F;--bad:#B4412F;--field:#FBFAF7;--hero:#14213D;--heroText:#F4F1EA;--heroMuted:#C9D3E3;--heroAccent:#F2A541;--band:#E6EDF7}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0F172A;--card:#18233B;--ink:#F4F1EA;--text:#E5E7EB;--muted:#A9B4C6;--line:#2A3757;--accent:#8DB4F0;--accent2:#F2A541;--good:#6FCF97;--bad:#F08A76;--field:#111A2E;--hero:#0B1224;--band:#1F2E4D}}
+:root[data-theme="dark"]{--bg:#0F172A;--card:#18233B;--ink:#F4F1EA;--text:#E5E7EB;--muted:#A9B4C6;--line:#2A3757;--accent:#8DB4F0;--accent2:#F2A541;--good:#6FCF97;--bad:#F08A76;--field:#111A2E;--hero:#0B1224;--band:#1F2E4D}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{background:var(--hero);color:var(--heroText);padding:40px 16px 32px}
+.wrap{max-width:1120px;margin:0 auto;padding:0 16px}
+.eyebrow{color:var(--heroAccent);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;margin:0 0 10px}
+h1{font-size:clamp(24px,4vw,36px);line-height:1.15;margin:0 0 10px}
+header p{color:var(--heroMuted);margin:0;max-width:760px}
+header a{color:var(--heroAccent)}
+main{padding:28px 0 48px;display:grid;grid-template-columns:340px 1fr;gap:24px;align-items:start}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px}
+main>*,.grid2>*{min-width:0}.panel{overflow-x:auto}
+@media (max-width:480px){.panel{padding:14px}td,th{padding:6px 3px;font-size:13px}label{grid-template-columns:1fr 96px}}
+h2{font-size:17px;color:var(--ink);margin:0 0 14px}
+h3{font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin:18px 0 8px}
+h3:first-of-type{margin-top:0}
+label{display:grid;grid-template-columns:1fr 112px;align-items:center;gap:10px;margin:6px 0;font-size:14px}
+label small{display:block;color:var(--muted);font-size:12px}
+input[type=number]{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--field);color:var(--text);font:inherit;text-align:right;font-variant-numeric:tabular-nums}
+input:focus{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;margin:6px 0 4px}
+.seg button{flex:1;padding:8px;border:0;background:var(--field);color:var(--muted);font:inherit;font-size:13px;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff}
+.btn{margin-top:16px;width:100%;padding:9px;border:1px solid var(--line);border-radius:9px;background:transparent;color:var(--text);font:inherit;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .v{font-size:22px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted)}
+.verdict{border-radius:12px;padding:14px 16px;margin-bottom:16px;border:1px solid var(--line);background:var(--band);color:var(--text)}
+.verdict b{color:var(--ink)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+td,th{padding:7px 4px;border-bottom:1px solid var(--line);text-align:right}
+td:first-child,th:first-child{text-align:left}
+th{color:var(--muted);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.05em}
+tr.hl td{background:var(--band);font-weight:600}
+tr.tot td{font-weight:700;color:var(--ink)}
+.chart{width:100%;height:260px;display:block}
+.note{font-size:12px;color:var(--muted);margin-top:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:3px;vertical-align:middle;margin-right:5px;border-radius:2px}
+footer{border-top:1px solid var(--line);padding:18px 0;color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<p class="eyebrow">Equipo 7 · Bono convertible hipotético de Apple</p>
+<h1>Calculadora: bono + opción y call spread</h1>
+<p>Cambia cualquier parámetro y todo se recalcula. Los valores iniciales son los del reporte al 6 de noviembre de 2026. <a href="../index.html">← Volver al proyecto</a></p>
+</div></header>
+
+<main class="wrap">
+<aside class="panel">
+<h2>Parámetros</h2>
+<h3>Mercado</h3>
+<label>Precio de AAPL (US$)<input id="S" type="number" step="0.01"></label>
+<label><span>Volatilidad anual (%)<small>GARCH largo plazo</small></span><input id="sig" type="number" step="0.1"></label>
+<label><span>Tasa libre de riesgo (%)<small>Treasury 6 años</small></span><input id="rf" type="number" step="0.01"></label>
+<label>Dividend yield (%)<input id="q" type="number" step="0.01"></label>
+<label><span>Spread de crédito (pb)<small>Sobre el Treasury</small></span><input id="spr" type="number" step="1"></label>
+<h3>Emisión</h3>
+<label>Monto (US$ millones)<input id="M" type="number" step="100"></label>
+<label>Plazo (años)<input id="T" type="number" step="1" min="1" max="30"></label>
+<label>Pagos de cupón por año<input id="m" type="number" step="1" min="1" max="12"></label>
+<label>Prima de conversión (%)<input id="pr" type="number" step="1"></label>
+<h3>Cupón</h3>
+<div class="seg" role="group" aria-label="Modo del cupón"><button id="mJusto" class="on" type="button">Justo (calculado)</button><button id="mManual" type="button">Manual</button></div>
+<label id="cupLbl" style="display:none">Cupón anual (%)<input id="cup" type="number" step="0.05"></label>
+<h3>Call spread</h3>
+<label><span>Prima efectiva tope (%)<small>Strike vendido</small></span><input id="pr2" type="number" step="1"></label>
+<button class="btn" id="reset" type="button">Restablecer valores del reporte</button>
+</aside>
+
+<section>
+<div class="kpis">
+<div class="kpi"><div class="v" id="kCup">—</div><div class="l" id="kCupL">Cupón justo</div></div>
+<div class="kpi"><div class="v" id="kOpt">—</div><div class="l">Opción por bono de US$1,000</div></div>
+<div class="kpi"><div class="v" id="kVpn">—</div><div class="l">VPN para accionistas actuales</div></div>
+<div class="kpi"><div class="v" id="kCs">—</div><div class="l" id="kCsL">Costo del call spread</div></div>
+</div>
+<div class="verdict" id="verdict"></div>
+
+<div class="grid2">
+<div class="panel"><h2>Valuación del bono convertible</h2><table id="tVal"></table></div>
+<div class="panel"><h2>¿El menor cupón es un ahorro?</h2><table id="tVp"></table>
+<p class="note">El cupón justo hace que bono + opción valgan la par. Así, el valor presente del ahorro en intereses es igual al valor de las opciones entregadas.</p></div>
+</div>
+
+<div class="grid2">
+<div class="panel"><h2>Call spread</h2><table id="tCs"></table></div>
+<div class="panel"><h2>Valor del convertible según el precio de AAPL</h2>
+<canvas class="chart" id="ch" role="img" aria-label="Valor del convertible contra precio de la acción"></canvas>
+<div class="legend"><span><i style="background:var(--accent)"></i>Convertible (bono + opción)</span><span><i style="background:var(--muted)"></i>Bono puro (piso)</span><span><i style="background:var(--accent2)"></i>Valor de conversión</span></div></div>
+</div>
+
+<div class="panel"><h2>Sensibilidad: prima de conversión contra cupón justo</h2><table id="tSens"></table>
+<p class="note">Una prima mayor entrega una opción menos valiosa, así que el cupón justo sube y la dilución potencial baja. Ninguna combinación crea valor a precio justo: cambia la mezcla entre intereses y acciones futuras.</p></div>
+</section>
+</main>
+<footer><div class="wrap">Modelo: bono con cupón periódico descontado a Treasury + spread; opción de conversión con Black-Scholes-Merton europeo con dividendo continuo (Hull, cap. 17 y 26). Material académico; no constituye recomendación de inversión.</div></footer>
+
+<script>
+const DEF={S:342.37,sig:30.2522,rf:4.69,q:0.3154,spr:40,M:10000,T:6,m:2,pr:30,pr2:75,cup:0.82};
+const F=1000, ids=Object.keys(DEF);
+let manual=false;
+const $=id=>document.getElementById(id);
+function Ncdf(x){ // Abramowitz-Stegun 7.1.26 refinement via erf
+  const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;
+  const s=x<0?-1:1,z=Math.abs(x)/Math.SQRT2,t=1/(1+p*z),y=1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-z*z);return 0.5*(1+s*y)}
+function bs(S,K,r,q,s,T){if(T<=0||s<=0)return Math.max(S*Math.exp(-q*T)-K*Math.exp(-r*T),0);const d1=(Math.log(S/K)+(r-q+s*s/2)*T)/(s*Math.sqrt(T)),d2=d1-s*Math.sqrt(T);return S*Math.exp(-q*T)*Ncdf(d1)-K*Math.exp(-r*T)*Ncdf(d2)}
+function bono(c,y,T,m){const n=Math.round(T*m);let v=0;for(let i=1;i<=n;i++)v+=F*c/m/Math.pow(1+y/m,i);return v+F/Math.pow(1+y/m,n)}
+function anu(y,T,m){const n=Math.round(T*m);let v=0;for(let i=1;i<=n;i++)v+=1/Math.pow(1+y/m,i);return v}
+const fU=x=>"US$"+x.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fM=x=>(x<0?"−":"")+"US$"+Math.abs(x/1e6).toLocaleString("en-US",{minimumFractionDigits:1,maximumFractionDigits:1})+" M";
+const fP=(x,d=2)=>(x*100).toFixed(d)+"%";
+const rows=(t,r)=>{$(t).innerHTML=r.map(x=>`<tr class="${x[2]||""}"><td>${x[0]}</td><td>${x[1]}</td></tr>`).join("")};
+function read(){const v={};ids.forEach(k=>{const x=parseFloat($(k).value);v[k]=isFinite(x)?x:DEF[k]});return v}
+function calc(v){
+  const S=v.S,s=v.sig/100,rf=v.rf/100,q=v.q/100,y=rf+v.spr/1e4,T=Math.max(v.T,0.5),m=Math.max(1,Math.round(v.m));
+  const K=S*(1+v.pr/100),n=F/K,opt=bs(S,K,rf,q,s,T)*n,A=anu(y,T,m),pv=1/Math.pow(1+y/m,Math.round(T*m));
+  const cJ=(F-opt-F*pv)/(F/m*A);                     // cupón que hace bono + opción = 1,000
+  const c=manual?v.cup/100:cJ, b=bono(c,y,T,m), nb=v.M*1e6/F;
+  const ahorro=(y-c)*v.M*1e6, vpA=ahorro/m*A, optTot=opt*nb, vpn=vpA-optTot;
+  const K2=S*(1+v.pr2/100), c1=bs(S,K,rf,q,s,T), c2=bs(S,K2,rf,q,s,T), acc=nb*n, cs=acc*(c1-c2);
+  return {S,s,rf,q,y,T,m,K,n,opt,cJ,c,b,nb,ahorro,vpA,optTot,vpn,K2,c1,c2,acc,cs,pr:v.pr,pr2:v.pr2,M:v.M};
+}
+function draw(r){
+  const cv=$("ch"),ctx=cv.getContext("2d"),dpr=window.devicePixelRatio||1,W=cv.clientWidth,H=cv.clientHeight;
+  cv.width=W*dpr;cv.height=H*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+  const st=getComputedStyle(document.documentElement),col=k=>st.getPropertyValue(k).trim();
+  const L=52,R=10,Tp=10,B=30,xs=[],N=60;for(let i=0;i<=N;i++)xs.push(r.S*(0.4+1.6*i/N));
+  const conv=xs.map(x=>r.b+bs(x,r.K,r.rf,r.q,r.s,r.T)*r.n),cvv=xs.map(x=>x*r.n);
+  const ymax=Math.max(...conv,...cvv)*1.05,ymin=0,xmin=xs[0],xmax=xs[N];
+  const X=x=>L+(x-xmin)/(xmax-xmin)*(W-L-R),Y=y=>Tp+(1-(y-ymin)/(ymax-ymin))*(H-Tp-B);
+  ctx.font="11px system-ui,sans-serif";ctx.fillStyle=col("--muted");ctx.strokeStyle=col("--line");ctx.lineWidth=1;
+  for(let i=0;i<=4;i++){const yv=ymin+(ymax-ymin)*i/4;ctx.beginPath();ctx.moveTo(L,Y(yv));ctx.lineTo(W-R,Y(yv));ctx.stroke();ctx.textAlign="right";ctx.fillText(Math.round(yv).toLocaleString("en-US"),L-6,Y(yv)+4)}
+  for(let i=0;i<=4;i++){const xv=xmin+(xmax-xmin)*i/4;ctx.textAlign=i===0?"left":i===4?"right":"center";ctx.fillText("$"+Math.round(xv),X(xv),H-10)}
+  const line=(ys,c,w,dash)=>{ctx.strokeStyle=c;ctx.lineWidth=w;ctx.setLineDash(dash||[]);ctx.beginPath();ys.forEach((y,i)=>i?ctx.lineTo(X(xs[i]),Y(y)):ctx.moveTo(X(xs[i]),Y(y)));ctx.stroke();ctx.setLineDash([])};
+  line(xs.map(()=>r.b),col("--muted"),1.5,[5,4]);line(cvv,col("--accent2"),1.5,[2,3]);line(conv,col("--accent"),2.5);
+  ctx.strokeStyle=col("--ink");ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(X(r.S),Tp);ctx.lineTo(X(r.S),H-B);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle=col("--ink");ctx.textAlign="left";ctx.fillText("Hoy",X(r.S)+4,Tp+12);
+}
+function render(){
+  const r=calc(read());
+  $("kCup").textContent=fP(r.c);$("kCupL").textContent=manual?`Cupón manual (justo: ${fP(r.cJ)})`:`Cupón justo (bono directo: ${fP(r.y)})`;
+  $("kOpt").textContent=fU(r.opt);
+  const vEl=$("kVpn");vEl.textContent=Math.abs(r.vpn)<5e5?"≈ US$0":fM(r.vpn);vEl.style.color=Math.abs(r.vpn)<5e5?"":r.vpn>0?"var(--good)":"var(--bad)";
+  $("kCs").textContent=fM(r.cs);$("kCsL").textContent=`Call spread: ${(r.cs/(r.M*1e6)*100).toFixed(1)}% del principal`;
+  let txt;
+  if(!manual) txt=`<b>A precio justo el VPN es cero.</b> El cupón baja de ${fP(r.y)} a ${fP(r.c)}: ${fM(r.ahorro)} menos de intereses al año. Su valor presente (${fM(r.vpA)}) es exactamente lo que valen las opciones de conversión que Apple entrega (${fM(r.optTot)}).`;
+  else if(r.vpn>5e5) txt=`<b>Con un cupón de ${fP(r.c)} los accionistas actuales ganan ${fM(r.vpn)}</b>: el ahorro en intereses vale más que las opciones entregadas. Los inversionistas recibirían un bono que vale menos que la par (${fU(r.b+r.opt)}), así que difícilmente lo comprarían a ese cupón.`;
+  else if(r.vpn<-5e5) txt=`<b>Con un cupón de ${fP(r.c)} los accionistas actuales pierden ${fM(-r.vpn)}</b>: Apple paga más intereses de los necesarios para la opción que entrega. El bono valdría ${fU(r.b+r.opt)}, por encima de la par.`;
+  else txt=`<b>Con un cupón de ${fP(r.c)} el VPN es prácticamente cero:</b> coincide con el cupón justo.`;
+  $("verdict").innerHTML=txt;
+  rows("tVal",[["Precio de conversión (K)",fU(r.K)],["Acciones por bono",r.n.toFixed(4)],["Rendimiento bono directo",fP(r.y)],["Cupón del convertible",fP(r.c)],["Valor del bono puro",fU(r.b)],["Valor de la opción",fU(r.opt)],["Bono + opción",fU(r.b+r.opt),"tot"]]);
+  rows("tVp",[["Reducción de intereses por año",fM(r.ahorro)],[`VP de la reducción (${r.T} años)`,fM(r.vpA)],["Valor de las opciones entregadas",fM(r.optTot)],["VPN para accionistas actuales",Math.abs(r.vpn)<5e5?"≈ US$0.0 M":fM(r.vpn),"hl"]]);
+  rows("tCs",[["Strike comprado (prima "+r.pr+"%)",fU(r.K)],["Strike vendido (prima "+r.pr2+"%)",fU(r.K2)],["Call comprada por acción",fU(r.c1)],["Call vendida por acción",fU(r.c2)],["Acciones cubiertas",(r.acc/1e6).toFixed(2)+" millones"],["Costo total",fM(r.cs),"tot"],["Dilución evitada","Entre "+fU(r.K)+" y "+fU(r.K2)]]);
+  const v=read(),pr=[15,20,25,30,35,40,50,60];
+  $("tSens").innerHTML="<tr><th>Prima</th><th>Precio de conversión</th><th>Opción por bono</th><th>Cupón justo</th><th>Acciones nuevas</th></tr>"+pr.map(p=>{const x=calc({...v,pr:p});return `<tr class="${p===v.pr?"hl":""}"><td>${p}%</td><td>${fU(x.K)}</td><td>${fU(x.opt)}</td><td>${x.cJ<0?"No viable ("+fP(x.cJ)+")":fP(x.cJ)}</td><td>${(x.nb*x.n/1e6).toFixed(1)} M</td></tr>`}).join("");
+  draw(r);
+}
+function setMode(mm){manual=mm;$("mJusto").classList.toggle("on",!mm);$("mManual").classList.toggle("on",mm);$("cupLbl").style.display=mm?"grid":"none";render()}
+function reset(){ids.forEach(k=>$(k).value=DEF[k]);setMode(false)}
+ids.forEach(k=>$(k).addEventListener("input",render));
+$("mJusto").onclick=()=>setMode(false);$("mManual").onclick=()=>setMode(true);$("reset").onclick=reset;
+window.addEventListener("resize",render);
+reset();
+</script>
+</body>
+</html>
