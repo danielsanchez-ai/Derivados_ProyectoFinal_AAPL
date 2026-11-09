@@ -30,7 +30,7 @@ operaciones realizadas en simuladores.
 | `datos/aapl_yahoo.csv` | Precios diarios de AAPL (Yahoo Finance, 6-nov-2021 a 6-nov-2026). |
 | `datos/griegas_equipo.csv` | Griegas de las 18 estrategias (LSEG, 12-oct-2026). También vienen incluidas dentro del Rmd. |
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
-| `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
+| `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq), ejecutado con resultados visibles, y su salida en JSON. |
 | `evidencias/` | Capturas de Investopedia y CME Group; pantallas y documento de estrategias en Bloomberg. |
 | `calculadora/calculadora_convertible.html` | Calculadora interactiva del convertible (bono + opción) y del call spread, con parámetros editables. |
 | `presentacion/` | Presentación en PDF (14 diapositivas). |
