@@ -408,6 +408,40 @@ kable(data.frame(Indicador = c("Precio AAPL (6-nov)", "Precio de conversión", "
       caption = "Valuación del convertible: bono + opción (Black-Scholes-Merton con dividendo)")
 ```
 
+## Validación del método con el caso Molson Coors
+
+Antes de aplicarlo a Apple, el mismo método se prueba con los datos del caso (junio de 2007): acción de US$87.61, prima de 25%,
+Treasury a 5 años de 4.46%, volatilidad de 23%, 6 años y tasa de descuento de 5.75%, sin dividendo.
+
+```{r validacion-molson}
+mc <- list(S = 87.61, prima = 0.25, rf = 0.0446, s = 0.23, T = 6, y = 0.0575, m = 2, F = 1000, monto = 575e6, prima_w = 0.60)
+mc$K <- mc$S * (1 + mc$prima); mc$n <- mc$F / mc$K
+mc_bono <- function(c) { n <- mc$T * mc$m; sum(mc$F * c / mc$m / (1 + mc$y / mc$m)^(1:n)) + mc$F / (1 + mc$y / mc$m)^n }
+mc_call <- bs_call(mc$S, mc$K, mc$rf, 0, mc$s, mc$T)
+mc_opcion <- mc_call * mc$n
+mc_cupon <- uniroot(function(c) mc_bono(c) + mc_opcion - mc$F, c(-0.3, 0.3), tol = 1e-12)$root
+mc_acc <- mc$monto / mc$K
+mc_Kw <- mc$S * (1 + mc$prima_w)
+mc_calls <- mc_acc * mc_call
+mc_warr <- mc_acc * bs_call(mc$S, mc_Kw, mc$rf, 0, mc$s, mc$T)
+kable(data.frame(
+  Concepto = c("Precio de conversión", "Call por acción (Black-Scholes)", "Opción de conversión por bono", "Bono sin conversión",
+               "Cupón a la par", "Compra de calls (strike 25%)", "Venta de warrants (strike 60%)", "Costo neto del call spread"),
+  `Nuestro modelo` = c(usd(mc$K), usd(mc_call), usd(mc_opcion), usd(mc_bono(mc_cupon)), pct(mc_cupon),
+                       musd(mc_calls), musd(mc_warr), musd(mc_calls - mc_warr)),
+  `Caso (Exhibits 1 a 3)` = c("US$109.51", "US$21.0", "US$191.5", "US$808.5", "1.93%", "US$106.7 millones", "US$57.0 millones",
+                              "US$49.7 millones"), check.names = FALSE),
+  caption = "Molson Coors: el método reproduce las notas de enseñanza del caso (NE90-06-107)")
+```
+
+**Interpretación.** El modelo reproduce la opción de US$191.5, el bono de US$808.5 y el cupón de 1.93% de las notas de
+enseñanza, así que el método es correcto antes de aplicarlo a Apple. En el call spread, el precio de las calls compradas
+(`r musd(mc_calls)` contra US$106.7 millones) es parecido al del caso, pero los bancos pagaron por los warrants bastante menos
+de lo que vale según el modelo (`r musd(mc_warr)` contra US$57.0 millones). Por eso el costo neto real (US$49.7 millones) es
+mayor que el teórico (`r musd(mc_calls - mc_warr)`): la volatilidad a 6 años que cobraron los bancos al comprar los warrants
+fue menor que 23%, y en esa diferencia está su margen. En ambos casos el mensaje es el mismo: subir la prima efectiva de
+conversión cuesta dinero (*no hay free lunch*).
+
 ## ¿El convertible ahorra dinero? Valor presente contra valor de la opción
 
 ```{r convertible-vpn}
@@ -436,15 +470,17 @@ K1 <- conv_K; K2 <- S0 * 1.75
 c1 <- bs_call(S0, K1, conv_rf, q, conv_sigma, conv_T); c2 <- bs_call(S0, K2, conv_rf, q, conv_sigma, conv_T)
 acc_conv <- n_bonos * conv_n
 cs_total <- acc_conv * (c1 - c2)
+cs_calls <- acc_conv * c1; cs_warr <- acc_conv * c2
 kable(data.frame(Indicador = c("Strike comprado (prima 30%)", "Strike vendido (prima 75%)", "Call comprada por acción", "Call vendida por acción",
-                               "Acciones potenciales por conversión", "Costo neto del call spread", "Costo neto (% del principal)",
-                               "Dilución potencial sin cobertura"),
-                 Valor = c(usd(K1), usd(K2), usd(c1), usd(c2), paste(round(acc_conv / 1e6, 2), "millones"), musd(cs_total),
-                           pct(cs_total / conv_monto, 1), pct(acc_conv / 14532.2e6, 2))),
+                               "Acciones potenciales por conversión", "Apple paga por las calls", "Apple cobra por los warrants",
+                               "Costo neto del call spread", "Costo neto (% del principal)", "Dilución potencial sin cobertura"),
+                 Valor = c(usd(K1), usd(K2), usd(c1), usd(c2), paste(round(acc_conv / 1e6, 2), "millones"), musd(cs_calls),
+                           musd(cs_warr), musd(cs_total), pct(cs_total / conv_monto, 1), pct(acc_conv / 14532.2e6, 2))),
       caption = "Call spread: de 30% a 75% de prima efectiva")
 ```
 
-**Interpretación.** Llevar la prima efectiva a 75% cuesta `r musd(cs_total)` (`r pct(cs_total / conv_monto, 1)` del
+**Interpretación.** Apple compra calls con strike en la prima de 30% por `r musd(cs_calls)` y vende warrants con strike en
+75% por `r musd(cs_warr)`. Llevar la prima efectiva a 75% cuesta el neto, `r musd(cs_total)` (`r pct(cs_total / conv_monto, 1)` del
 principal), similar al 8.6% del caso Molson Coors. Si el call spread también está a precio justo, su VPN es cero: no crea
 valor, solo traslada a Apple el costo de evitar la dilución entre US$`r round(K1)` y US$`r round(K2)`. Para Apple, cuya
 dilución potencial es de `r pct(acc_conv / 14532.2e6, 2)` de sus acciones, se justifica más como señal que como protección.
@@ -495,7 +531,7 @@ Proponemos una **prima de 30% con un cupón cercano a `r pct(conv_cupon)`**. Est
 la dilución por debajo de 0.2%. Con una prima mayor la opción vale menos, el cupón se acerca al de la deuda recta y el bono
 pierde su atractivo; con una menor, la dilución crece. Para que el convertible genere un ahorro real, Apple tendría que
 colocarlo con un cupón inferior al justo, lo que solo ocurre si los inversionistas pagan una volatilidad mayor que la de GARCH.
-La calculadora interactiva del proyecto (`calculadora/calculadora_convertible.html`) permite probar esas combinaciones.
+La calculadora interactiva del proyecto (`4_calculadora/calculadora_convertible.html`) permite probar esas combinaciones.
 
 # Administración del riesgo cambiario y de tasas de interés
 
@@ -806,7 +842,8 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
               sens = data.frame(s = sens$sigma, v = round(sens$valor, 3))),
   conv = list(K = conv_K, n = conv_n, sigma = conv_sigma, rf = conv_rf, y = conv_y, opcion = conv_opcion, bono = conv_bono, cupon = conv_cupon,
               ahorro = conv_ahorro, vp_ahorro = vp_ahorro, opciones_total = conv_opcion * n_bonos, K2 = K2, c1 = c1, c2 = c2,
-              cs_total = cs_total, acc_conv = acc_conv),
+              cs_total = cs_total, acc_conv = acc_conv, cs_calls = cs_calls, cs_warr = cs_warr),
+  molson = list(opcion = mc_opcion, cupon = mc_cupon, bono = mc_bono(mc_cupon), call = mc_call, calls = mc_calls, warr = mc_warr),
   swaps = list(eurusd = eurusd, usd_n = ccs_usd, cupon_eur = ccs_cupon_eur, ccs = ccs_tasa_usd, directo = directo_usd, irs_fijo = irs_fijo,
                spread_flot = irs_spread, dv01 = dv01, fwd7 = fwd[ccs_T], vp_sin = vp_sin, vp_con = vp_con, esc = esc, esc_irs = esc_irs,
                zero_usd = -log(cu$D) / (1:10), zero_eur = -log(ce$D) / (1:10)),
@@ -881,7 +918,7 @@ kable(data.frame(
             "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "27 y 28-oct-2026", "27-oct-2026", "26-sep-2026",
             "28-mar-2026", "5-nov-2026", "Vigentes", "Supuesto"),
   Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "BlueGamma", "TradingNews", "Apple, 10-K FY2026",
-             "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG Workspace (Tarea 3; evidencias/lseg)",
+             "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG Workspace (Tarea 3; 7_anexo_capturas/lseg)",
              "CME Group, Settlements", "CME Group", "CME Group", "Apple, 10-K FY2026", "Apple, 10-Q Q2 FY2026",
              "Suplemento de prospecto (SEC)", "Moody's (Aaa) y S&P (AA+)", "Equipo (40 pb, 45 pb, −10 pb)")),
   caption = "Cada dato conserva su fecha original")
