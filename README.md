@@ -42,7 +42,7 @@ previos del equipo con datos de LSEG: Tarea 3 de estrategias y griegas, y análi
 | `5_python/valuacion_bs_arbol_convertible.ipynb` y `.py` | Black-Scholes, árbol binomial, griegas, escenarios, convertible, validación con Molson Coors y call spread. |
 | `5_python/garch_derivados_AAPL_Oro_WTI_6E.ipynb` y `.py` | Descarga de datos de Yahoo Finance, GARCH, correlaciones, VaR, Monte Carlo, árbol binomial y griegas para AAPL, oro, WTI, Euro FX y Nasdaq; su salida está en `resultados_garch.json`. |
 | `6_uso_IA/` | Resumen de prompts, código recibido y correcciones (Claude y TecGPT) y la conversación completa con TecGPT con notas del equipo. |
-| `7_anexo_capturas/` | PDF del anexo y las capturas originales por fuente: `lseg/`, `bloomberg/`, `cme/`, `tradingview/` e `investopedia/`. |
+| `7_anexo_capturas/` | PDF del anexo y las capturas originales por fuente: `lseg/apple/` (DES, FA, deuda, calificaciones, CDS, curva, opciones, basis y €STR), `lseg/`, `bloomberg/`, `cme/`, `tradingview/` e `investopedia/`. |
 | `index.html` | Página de inicio del proyecto (GitHub Pages). |
 
 ## Cómo reproducir
@@ -68,7 +68,8 @@ descarga de Yahoo Finance. También pueden correrse localmente: `python valuacio
 |---|---|---|
 | Precios diarios de AAPL | 8-nov-2021 a 6-nov-2026 | Yahoo Finance |
 | Treasuries | 6-nov-2026 | Forbes Advisor |
-| Curvas SOFR y €STR | 2 y 3-nov-2026 | BlueGamma |
+| Curva SOFR | 2-nov-2026 | BlueGamma |
+| Curva €STR (0#EURESTOISZ=R) y basis EUR/USD (EURCBS=) | 6 y 8-nov-2026 | LSEG Workspace |
 | EUR/USD | 6-nov-2026 | TradingNews |
 | Operaciones | 30-sep a 6-nov-2026 | Investopedia |
 | Spreads de AAPL, oro y WTI | 14-oct-2026 | Bloomberg OVME / OVML |
@@ -77,9 +78,9 @@ descarga de Yahoo Finance. También pueden correrse localmente: `python valuacio
 | Deuda, efectivo y resultados de Apple | 26-sep-2026 | Apple, 10-K FY2026 |
 | Derivados de Apple | 28-mar-2026 | Apple, 10-Q Q2 FY2026 |
 | Emisión de Apple (US$7,500 M) | 5-nov-2026 | Suplemento de prospecto (SEC) |
-| Calificaciones de Apple | Vigentes | Moody's (Aaa) y S&P (AA+) |
+| Perfil, financieros, deuda, bonos en euros, calificaciones, CDS, curva y opciones de Apple | 8-nov-2026 | LSEG Workspace (`7_anexo_capturas/lseg/apple/`) |
 | Caso Molson Coors | Junio de 2007 | Notas de enseñanza NE90-06-107 |
-| Diferenciales de Apple y basis EUR/USD | — | Supuestos del equipo |
+| Diferencial de crédito de Apple en euros | — | Supuesto del equipo |
 
 ## Operaciones: ejecutadas y modeladas
 

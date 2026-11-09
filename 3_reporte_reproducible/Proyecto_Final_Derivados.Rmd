@@ -52,18 +52,20 @@ fecha_inicio  <- as.Date("2021-11-06")         # cinco años de historia para GA
 ust <- c(`1` = 0.0433, `2` = 0.0451, `3` = 0.0459, `5` = 0.0464, `7` = 0.0474, `10` = 0.0486)
 r_corto <- ust[["1"]]                          # tasa para la call de 42 días
 
-# Curvas swap par con cupón anual (BlueGamma): SOFR al 2-nov-2026 y €STR al 3-nov-2026
+# Curva SOFR par con cupón anual (BlueGamma, 2-nov-2026). Curva €STR: factores de descuento de LSEG (0#EURESTOISZ=R) al
+# 6-nov-2026; la curva par de BlueGamma (3-nov) se conserva como referencia y difiere en menos de 1 pb.
 plazos   <- c(1, 2, 3, 5, 7, 10)
 sofr_par <- c(4.27, 4.39, 4.43, 4.41, 4.44, 4.51) / 100
 estr_par <- c(2.87, 2.99, 3.02, 3.05, 3.09, 3.17) / 100
+estr_df_lseg <- c(0.9719091, 0.9429527, 0.9148775, 0.8877115, 0.8612341, 0.8350967, 0.8090212, 0.7831800, 0.7573902, 0.7321917)
 
 eurusd   <- 1.1132                             # EUR/USD, 6-nov-2026 (TradingNews)
 dividendo_anual <- 0.27 * 4                    # Dividendo trimestral de Apple (Q4 FY2026)
 
-# Supuestos (no son cotizaciones)
+# Supuestos y datos de terminal
 spread_usd <- 0.0040                           # Apple sobre Treasuries; la emisión del 5-nov-2026 pagó 35 pb a 5 años y 45 pb a 7
 spread_eur <- 0.0045                           # Apple sobre mid-swaps en euros
-basis_eur  <- -0.0010                          # Basis EUR/USD a 7 años
+basis_eur  <- 0.000725                         # Basis EUR/USD a 7 años: LSEG EURCBS=, 4.75 / 9.75 pb (punto medio), 8-nov-2026
 
 # Posición del equipo en Investopedia (Holdings al cierre del 6-nov-2026)
 call_k <- 345; call_venc <- as.Date("2026-12-18"); call_prima_pagada <- 13.50
@@ -190,21 +192,40 @@ derivados_apple <- data.frame(
   `Nocional (US$ M)` = c(57963, 96341, 10625), check.names = FALSE)
 kable(derivados_apple %>% mutate(`Nocional (US$ M)` = scales::comma(`Nocional (US$ M)`)),
       caption = "Derivados de Apple al 28-mar-2026 (10-Q, segundo trimestre fiscal)", align = c("l", "r"))
+
+bonos_eur <- data.frame(
+  Bono = c("AAPL 1.625% 10-nov-2026", "AAPL 2.000% 17-sep-2027", "AAPL 1.375% 24-may-2029", "AAPL 0.500% 15-nov-2031"),
+  ISIN = c("XS1135337498", "XS1292389415", "XS1619312686", "XS2079716937"),
+  `Monto (US$ M equivalentes)` = c(1560.0, 1114.3, 1392.9, 1114.3), check.names = FALSE)
+kable(bonos_eur, caption = "Bonos de Apple en euros en circulación (LSEG Workspace, Debt Structure, 8-nov-2026)")
+
+lseg_credito <- data.frame(
+  Indicador = c("Bonos en circulación", "Vencimientos 2026 / 2027 / 2028", "S&P (largo plazo, perspectiva)", "Moody's (senior no garantizada)",
+                "CDS a 5 años (Markit, cierre 6-nov)", "CDS a 10 años (Refinitiv, cierre 6-nov)", "Curva de Apple en USD a 6 años",
+                "Spread contra Treasury a 5 / 6 años"),
+  Valor = c("78 bonos por US$86,057 M", "US$1,560 M / US$9,864 M / US$9,300 M", "AA+, estable (ratificada 22-may-2026)",
+            "Aaa (ratificada 20-nov-2024)", "46.0 pb", "66.3 pb", "5.046% (rendimiento par)", "34.2 / 35.2 pb"))
+kable(lseg_credito, caption = "Deuda y crédito de Apple en LSEG Workspace (Debt Structure, Issuer Ratings, CDS Overview e Issuer Curve, 8-nov-2026)")
 ```
 
 **Interpretación.** Apple tiene más efectivo que deuda: `r musd(136935e6 - 78114e6 - 1997e6, 0)` de efectivo neto y una
 capitalización de US$`r scales::comma(S0 * acciones_apple / 1e9)` mil millones al precio del 6 de noviembre. Aun
 así emite deuda con regularidad: financiar parte de sus recompras y dividendos con deuda conserva liquidez y le cuesta muy poco
 sobre los Treasuries, porque está calificada **Aaa por Moody's** (desde diciembre de 2021) y **AA+ por S&P**. Tiene
-`r musd(9906e6, 0)` de deuda que vence en los próximos 12 meses y notas en euros y otras monedas, listadas en Nasdaq, con vencimientos entre 2027 y 2042.
+`r musd(9906e6, 0)` de deuda que vence en los próximos 12 meses: LSEG registra 78 bonos por US$86,057 millones (ya incluye la emisión
+de noviembre), con vencimientos de US$9,864 millones en 2027 y US$9,300 millones en 2028. Tiene cuatro bonos en euros por el
+equivalente de unos US$5,180 millones, y el primero, de 1.625%, **vence el 10 de noviembre de 2026**.
 
 Esto respalda tres supuestos del proyecto:
 
-- **El diferencial de crédito de 40 pb para 6 años** está entre los 35 pb que pagó a 5 años y los 45 pb a 7 años el 5 de noviembre.
+- **El diferencial de crédito de 40 pb para 6 años** está entre los 35 pb que pagó a 5 años y los 45 pb a 7 años el 5 de noviembre;
+  en LSEG, la curva de Apple da 5.046% a 6 años (35.2 pb sobre el Treasury) y su CDS a 5 años cotiza en 46 pb. Usamos 5.09%.
 - **El cross-currency swap y el interest rate swap no son hipotéticos para Apple.** Ya usa contratos de tipo de cambio, como los
   cross-currency swaps, para cubrir su deuda en otras monedas, y contratos de tasa para convertir parte de su deuda fija a
   flotante. El nocional de sus derivados suma cerca de US$165,000 millones.
-- **La emisión en euros** encaja con su perfil: Europa es su segundo mercado y ya tiene deuda en euros.
+- **La emisión en euros** encaja con su perfil: Europa es su segundo mercado, ya tiene unos US$5,180 millones en bonos en euros
+  (casi el tamaño de la emisión de €5,000 millones del proyecto) y uno de ellos vence esta semana: refinanciarlo en euros y
+  cubrirlo con un CCS es una decisión real de tesorería.
 
 # Volatilidad: GARCH(1,1) con distribución t de Student
 
@@ -372,6 +393,10 @@ ggplot(sens, aes(sigma, valor)) + geom_line(color = azul, linewidth = 1) +
 **Interpretación.** Con la volatilidad que GARCH espera para la vida de la opción (`r pct(sigma_call, 1)`), el árbol vale
 `r usd(crr(S0, call_k, r_corto, q, sigma_call, T_call))` por acción, contra `r usd(call_valor_6nov)` en el mercado. La
 volatilidad implícita del precio de mercado es `r pct(iv_mercado, 1)`: `r ifelse(sigma_call > iv_mercado, "GARCH espera más movimiento del que cobra el mercado, así que la opción se ve barata", "el mercado cobra más volatilidad de la que espera GARCH, así que la opción se ve cara")`.
+En LSEG (cadena OPW, 8-nov-2026) la call 345 cotiza 11.25 / 11.50 con último de 11.35 y una volatilidad implícita media de
+26.98% (delta de 0.498). Con el precio medio (11.375), nuestra implícita es 25.6%; la diferencia con LSEG viene de la curva de
+tasas, los dividendos y el conteo de días que usa cada sistema. En ambos casos queda por debajo de la volatilidad que espera
+GARCH (29.5%), así que la conclusión no cambia: el mercado cobra menos volatilidad de la que anticipa el modelo.
 Usar la volatilidad de un solo día (33.6% en un día de alta volatilidad) para una opción de varias semanas sobreestimaría
 su valor. La prima pagada el 27 de octubre (US$13.50) es de otra fecha y no se compara directamente.
 
@@ -547,11 +572,12 @@ bootstrap <- function(par) {
   for (i in 1:10) D[i] <- (1 - pr[i] * sum(D[seq_len(i - 1)])) / (1 + pr[i])
   list(par = pr, D = D)
 }
-cu <- bootstrap(sofr_par); ce <- bootstrap(estr_par)
+cu <- bootstrap(sofr_par)
+ce <- list(D = estr_df_lseg, par = (1 - estr_df_lseg) / cumsum(estr_df_lseg))    # €STR de LSEG al 6-nov-2026
 De_adj <- ce$D * exp(-basis_eur * (1:10))
 curvas <- data.frame(Año = 1:10, `SOFR par` = cu$par, `DF USD` = cu$D, `€STR par` = ce$par, `DF EUR` = ce$D,
                      `Forward EUR/USD` = eurusd * ce$D / cu$D, check.names = FALSE)
-kable(curvas, digits = 4, caption = "Curvas bootstrap (SOFR al 2-nov y €STR al 3-nov) y tipo de cambio forward implícito")
+kable(curvas, digits = 4, caption = "Curva SOFR bootstrap (BlueGamma, 2-nov), curva €STR de LSEG (6-nov) y tipo de cambio forward implícito")
 ```
 
 ## Cross-currency swap EUR/USD
@@ -583,7 +609,7 @@ convertidos al tipo de cambio de hoy, lo que haría pensar que el CCS "es más c
 supone un tipo de cambio constante. El mercado ya descuenta que el euro se aprecie por el diferencial de tasas: el
 forward a 7 años es `r round(fwd[ccs_T], 4)`. Además, al vencimiento Apple tendría que comprar €5,000 millones a ese precio.
 Con el tipo de cambio forward, ambas alternativas tienen casi el mismo valor presente (`r musd(vp_sin * 1e6)` contra
-`r musd(vp_con * 1e6)`); la diferencia sale del basis y del diferencial de crédito. El CCS no encarece la deuda: fija el
+`r musd(vp_con * 1e6)`); la diferencia sale del basis de mercado (+7.25 pb a 7 años en LSEG) y del diferencial de crédito. El CCS no encarece la deuda: fija el
 tipo de cambio.
 
 Además, emitir en euros y cambiar a dólares cuesta `r pct(ccs_tasa_usd)`, `r pb(directo_usd - ccs_tasa_usd)` menos que un
@@ -630,7 +656,7 @@ flujo_sofr <- data.frame(SOFR = c(0.025, 0.035, 0.045, 0.055, 0.065)) %>%
 kable(flujo_sofr, digits = 1, caption = "Pago anual en millones de USD si SOFR se mantuviera en cada nivel")
 ```
 
-**Interpretación.** El IRS no puede recibir 5.02%, la tasa que paga Apple, porque entonces los flujos fijos se cancelarían
+**Interpretación.** El IRS no puede recibir `r pct(ccs_tasa_usd)`, la tasa que paga Apple, porque entonces los flujos fijos se cancelarían
 por construcción. El swap SOFR de mercado a 7 años está en `r pct(irs_fijo)`, así que el costo flotante correcto
 es **SOFR + `r pb(irs_spread)`**. Al contratarse, el IRS vale cero. Si SOFR baja 100 pb gana
 `r musd(esc_irs[[2]][2] * 1e6, 0)`; si sube 100 pb pierde `r musd(-esc_irs[[2]][6] * 1e6, 0)`. Los dos métodos de Hull (bonos y
@@ -807,8 +833,8 @@ US$613 sobre US$1,000,000. Se compone de US$1,157 no realizados en las acciones,
 −US$320 realizados en la put 330, que funcionó como seguro (*protective put*) durante la primera semana de octubre y venció
 sin valor. Las estrategias de Bloomberg y LSEG son modeladas: su resultado teórico (oro −US$3,077 y WTI −US$1,358 con el settle
 del 27 de octubre) no es una pérdida realizada. El Bull Call Spread de WTI 89.50/90 no aparece en el Trade History, por lo que
-se clasifica como modelado. En Holdings, el "Current Price" de la call dice US$11.35, pero el valor total de US$1,125 corresponde
-a US$11.25 por acción; se usa este último.
+se clasifica como modelado. En Holdings, el "Current Price" de la call dice US$11.35, que es el último precio operado (LSEG: bid 11.25, ask 11.50,
+último 11.35); Investopedia valúa la posición al bid, US$11.25 por acción (US$1,125), y ese es el valor que se usa.
 
 # Comparación de estrategias en Bloomberg (14 de octubre de 2026)
 
@@ -850,7 +876,8 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
   tlock = list(N = tl_N, dv01 = dv01_cubrir, n_zn = n_zn, dv01_zn = dv01_zn, n_6e = n_6e_principal, n_6e_cupon = n_6e_cupon,
                margen_10 = margen_10, esc = esc_tl),
   apple = list(ventas = 478834, utilidad = 132175, caja = 136935, deuda = 78114, deuda_corto = 9906, papel = 1997,
-               recompras = 85800, acciones = acciones_apple, emision = emision, derivados = derivados_apple),
+               recompras = 85800, acciones = acciones_apple, emision = emision, derivados = derivados_apple,
+               bonos_eur = bonos_eur, lseg = lseg_credito, basis = basis_eur),
   griegas = griegas_equipo, netas = netas, cuenta = cuenta, inventario = inventario, comp = comp
 ), "resultados/resumen.json", auto_unbox = TRUE, digits = 8, dataframe = "rows", na = "null")
 ```
@@ -897,8 +924,8 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
 # Limitaciones
 
 - GARCH(1,1) simétrico no captura que las caídas aumenten más la volatilidad que las subidas (GJR-GARCH o EGARCH sí).
-- Los swaps se valúan con cupón anual y curvas SOFR y €STR de 2 y 3 de noviembre; el diferencial de crédito de Apple y el
-  basis EUR/USD son supuestos.
+- Los swaps se valúan con cupón anual, la curva SOFR de BlueGamma (2 de noviembre) y la €STR de LSEG (6 de noviembre); el basis
+  EUR/USD es el punto medio de LSEG y el diferencial de crédito de Apple en euros (45 pb) es un supuesto.
 - El convertible y el call spread usan Black-Scholes europeo con volatilidad constante; no incluyen costos de emisión ni
   cláusulas contractuales.
 - El T-lock y los futuros se dimensionan por DV01; el DV01 del futuro ZN aproxima el bono entregable más barato con un Treasury
@@ -913,13 +940,15 @@ kable(data.frame(
   Dato = c("Precios diarios de AAPL", "Treasuries (1, 2, 3, 5, 7 y 10 años)", "Curva SOFR", "Curva €STR", "EUR/USD",
            "Dividendo y resultados de Apple", "Operaciones de Investopedia", "Bull Call Spread AAPL, oro y WTI", "18 estrategias y griegas",
            "Settle de opciones de oro y WTI", "Opciones y futuro 6EZ6", "FedWatch, ZQZ6 y NQZ6", "Deuda, efectivo y resultados de Apple",
-           "Derivados de Apple", "Emisión de Apple (7 tramos)", "Calificaciones de Apple", "Diferenciales de crédito y basis"),
-  Fecha = c("6-nov-2021 a 6-nov-2026", "6-nov-2026", "2-nov-2026", "3-nov-2026", "6-nov-2026", "Q4 FY2026 (30-oct-2026)",
+           "Derivados de Apple", "Emisión de Apple (7 tramos)", "Calificaciones, deuda, CDS y curva de Apple", "Opciones AAPL 18-dic-2026",
+           "Basis EUR/USD (EURCBS=)", "Diferenciales de crédito"),
+  Fecha = c("6-nov-2021 a 6-nov-2026", "6-nov-2026", "2-nov-2026", "6-nov-2026", "6-nov-2026", "Q4 FY2026 (30-oct-2026)",
             "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "27 y 28-oct-2026", "27-oct-2026", "26-sep-2026",
-            "28-mar-2026", "5-nov-2026", "Vigentes", "Supuesto"),
-  Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "BlueGamma", "TradingNews", "Apple, 10-K FY2026",
+            "28-mar-2026", "5-nov-2026", "8-nov-2026", "8-nov-2026", "8-nov-2026", "Supuesto"),
+  Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "LSEG Workspace (0#EURESTOISZ=R)", "TradingNews", "Apple, 10-K FY2026",
              "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG Workspace (Tarea 3; 7_anexo_capturas/lseg)",
              "CME Group, Settlements", "CME Group", "CME Group", "Apple, 10-K FY2026", "Apple, 10-Q Q2 FY2026",
-             "Suplemento de prospecto (SEC)", "Moody's (Aaa) y S&P (AA+)", "Equipo (40 pb, 45 pb, −10 pb)")),
+             "Suplemento de prospecto (SEC)", "LSEG Workspace (Issuer Ratings, Debt Structure, CDS, Issuer Curve)", "LSEG Workspace (OPW)",
+             "LSEG Workspace", "Equipo (40 pb en USD y 45 pb en EUR; respaldados por la curva y el CDS de LSEG)")),
   caption = "Cada dato conserva su fecha original")
 ```
