@@ -11,11 +11,13 @@ operaciones realizadas en simuladores.
 
 | Entregable | Liga |
 |---|---|
+| Reporte ejecutivo (PDF y Word) | [Abrir PDF](reporte_ejecutivo/Reporte_ejecutivo_Derivados.pdf) · [Word](reporte_ejecutivo/Reporte_ejecutivo_Derivados.docx) |
 | Página del proyecto | [https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/) |
 | Reporte completo (HTML) | [Abrir reporte](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/Proyecto_Final_Derivados.html) |
 | Dashboard ejecutivo | [Abrir dashboard](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/dashboard/dashboard_ejecutivo.html) |
 | Calculadora bono + opción y call spread | [Abrir calculadora](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/calculadora/calculadora_convertible.html) |
 | Presentación (PDF) | [Abrir presentación](presentacion/Presentacion_Proyecto_Final_Equipo7.pdf) |
+| Uso de inteligencia artificial | [Abrir PDF](ia/uso_de_IA_Equipo7.pdf) |
 | Código fuente | [`Proyecto_Final_Derivados.Rmd`](Proyecto_Final_Derivados.Rmd) |
 
 ## Contenido
@@ -29,9 +31,11 @@ operaciones realizadas en simuladores.
 | `datos/griegas_equipo.csv` | Griegas de las 18 estrategias (LSEG, 12-oct-2026). También vienen incluidas dentro del Rmd. |
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
 | `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq) y su salida. |
-| `evidencias/` | Capturas de Investopedia, CME Group y Bloomberg. |
+| `evidencias/` | Capturas de Investopedia y CME Group; pantallas y documento de estrategias en Bloomberg. |
 | `calculadora/calculadora_convertible.html` | Calculadora interactiva del convertible (bono + opción) y del call spread, con parámetros editables. |
-| `presentacion/` | Presentación en PDF (12 diapositivas). |
+| `presentacion/` | Presentación en PDF (14 diapositivas). |
+| `reporte_ejecutivo/` | Reporte ejecutivo en Word y PDF (4 páginas). |
+| `ia/` | Prompts, código recibido y correcciones del uso de IA. |
 | `index.html` | Página de inicio del proyecto (GitHub Pages). |
 
 ## Cómo reproducir
@@ -58,6 +62,10 @@ Si `rugarch` está instalado, el reporte lo usa para validar los parámetros.
 | Spreads de AAPL, oro y WTI | 14-oct-2026 | Bloomberg OVME / OVML |
 | 18 estrategias y griegas | 12-oct-2026 | LSEG |
 | Settle de oro y WTI, 6EZ6, FedWatch, NQZ6 | 27 y 28-oct-2026 | CME Group |
+| Deuda, efectivo y resultados de Apple | 26-sep-2026 | Apple, 10-K FY2026 |
+| Derivados de Apple | 28-mar-2026 | Apple, 10-Q Q2 FY2026 |
+| Emisión de Apple (US$7,500 M) | 5-nov-2026 | Suplemento de prospecto (SEC) |
+| Calificaciones de Apple | Vigentes | Moody's (Aaa) y S&P (AA+) |
 | Diferenciales de Apple y basis EUR/USD | — | Supuestos del equipo |
 
 ## Operaciones: ejecutadas y modeladas
@@ -75,6 +83,7 @@ de sesión de R y Jupyter (`.Rhistory`, `.RData`, `.Renviron`, `.ipynb_checkpoin
 ## Uso de inteligencia artificial
 
 El código, el dashboard y la redacción se elaboraron con apoyo de Claude (Anthropic), con datos, operaciones y decisiones
-del equipo. El equipo revisó las cifras contra sus fuentes.
+del equipo. El equipo revisó las cifras contra sus fuentes. El detalle de prompts, código recibido y correcciones está en
+[`ia/uso_de_IA_Equipo7.pdf`](ia/uso_de_IA_Equipo7.pdf).
 
 *Material académico; no constituye recomendación de inversión.*

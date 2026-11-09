@@ -61,7 +61,7 @@ eurusd   <- 1.1132                             # EUR/USD, 6-nov-2026 (TradingNew
 dividendo_anual <- 0.27 * 4                    # Dividendo trimestral de Apple (Q4 FY2026)
 
 # Supuestos (no son cotizaciones)
-spread_usd <- 0.0040                           # Apple sobre Treasuries
+spread_usd <- 0.0040                           # Apple sobre Treasuries; la emisión del 5-nov-2026 pagó 35 pb a 5 años y 45 pb a 7
 spread_eur <- 0.0045                           # Apple sobre mid-swaps en euros
 basis_eur  <- -0.0010                          # Basis EUR/USD a 7 años
 
@@ -158,6 +158,53 @@ ggplot(aapl[-1, ], aes(fecha, rend)) + geom_line(color = azul, linewidth = 0.35)
 
 La curtosis de `r round(mean((r - mean(r))^4) / sd(r)^4, 1)` (3 en una normal) indica colas pesadas: los días extremos son
 más frecuentes de lo que supone una distribución normal. Por eso el GARCH se estima con distribución t de Student.
+
+# Diagnóstico de Apple: deuda, calificaciones y uso de derivados
+
+Antes de proponer coberturas conviene saber de dónde parte Apple. Las cifras vienen de su 10-K del año fiscal 2026 (cerrado
+el 26 de septiembre de 2026), de su 10-Q del segundo trimestre fiscal y del suplemento de la emisión del 5 de noviembre.
+
+```{r diagnostico}
+acciones_apple <- 14532.2e6                      # acciones en circulación al 23-oct-2026 (10-K)
+fin <- data.frame(
+  Concepto = c("Ventas netas", "Utilidad neta", "Flujo de operación", "Recompra de acciones", "Efectivo y valores negociables",
+               "Deuda de largo plazo (term debt)", "  Porción circulante (vence en 12 meses)", "  Porción no circulante",
+               "Papel comercial", "Efectivo neto de deuda"),
+  `US$ millones` = c(478834, 132175, 145097, 85800, 136935, 78114, 9906, 68208, 1997,
+                     136935 - 78114 - 1997), check.names = FALSE)
+kable(fin %>% mutate(`US$ millones` = scales::comma(`US$ millones`)),
+      caption = "Apple, año fiscal 2026 (10-K al 26-sep-2026)", align = c("l", "r"))
+```
+
+```{r diagnostico-deuda}
+emision <- data.frame(
+  Nota = c("Flotante 2028", "Flotante 2029", "4.650% 2028", "4.750% 2029", "4.900% 2031", "5.100% 2033", "5.350% 2036"),
+  `Monto (US$ M)` = c(500, 750, 1000, 1000, 1000, 1250, 2000),
+  Rendimiento = c("SOFR + 0.33%", "SOFR + 0.45%", "4.676%", "4.790%", "4.939%", "5.139%", "5.374%"),
+  `Spread vs Treasury` = c("—", "—", "22 pb", "27 pb", "35 pb", "45 pb", "55 pb"), check.names = FALSE)
+kable(emision, caption = "Emisión de Apple del 5-nov-2026: US$7,500 millones en siete tramos (liquidación 9-nov)")
+
+derivados_apple <- data.frame(
+  Instrumento = c("Contratos de tipo de cambio designados como cobertura", "Contratos de tipo de cambio no designados",
+                  "Contratos de tasa de interés designados como cobertura"),
+  `Nocional (US$ M)` = c(57963, 96341, 10625), check.names = FALSE)
+kable(derivados_apple %>% mutate(`Nocional (US$ M)` = scales::comma(`Nocional (US$ M)`)),
+      caption = "Derivados de Apple al 28-mar-2026 (10-Q, segundo trimestre fiscal)", align = c("l", "r"))
+```
+
+**Interpretación.** Apple tiene más efectivo que deuda: `r musd(136935e6 - 78114e6 - 1997e6, 0)` de efectivo neto y una
+capitalización de US$`r scales::comma(S0 * acciones_apple / 1e9)` mil millones al precio del 6 de noviembre. Aun
+así emite deuda con regularidad: financiar parte de sus recompras y dividendos con deuda conserva liquidez y le cuesta muy poco
+sobre los Treasuries, porque está calificada **Aaa por Moody's** (desde diciembre de 2021) y **AA+ por S&P**. Tiene
+`r musd(9906e6, 0)` de deuda que vence en los próximos 12 meses y notas en euros y otras monedas, listadas en Nasdaq, con vencimientos entre 2027 y 2042.
+
+Esto respalda tres supuestos del proyecto:
+
+- **El diferencial de crédito de 40 pb para 6 años** está entre los 35 pb que pagó a 5 años y los 45 pb a 7 años el 5 de noviembre.
+- **El cross-currency swap y el interest rate swap no son hipotéticos para Apple.** Ya usa contratos de tipo de cambio, como los
+  cross-currency swaps, para cubrir su deuda en otras monedas, y contratos de tasa para convertir parte de su deuda fija a
+  flotante. El nocional de sus derivados suma cerca de US$165,000 millones.
+- **La emisión en euros** encaja con su perfil: Europa es su segundo mercado y ya tiene deuda en euros.
 
 # Volatilidad: GARCH(1,1) con distribución t de Student
 
@@ -402,6 +449,54 @@ principal), similar al 8.6% del caso Molson Coors. Si el call spread también es
 valor, solo traslada a Apple el costo de evitar la dilución entre US$`r round(K1)` y US$`r round(K2)`. Para Apple, cuya
 dilución potencial es de `r pct(acc_conv / 14532.2e6, 2)` de sus acciones, se justifica más como señal que como protección.
 
+## Preguntas guía del caso
+
+**¿Para qué se usarían los fondos?** En su emisión del 5 de noviembre Apple declaró que usaría los recursos para "propósitos
+corporativos generales, incluidas recompras de acciones y pago de dividendos", además de capital de trabajo, inversiones,
+adquisiciones y pago de deuda. El convertible hipotético tendría el mismo destino, con una ventaja adicional: sus
+US$10,000 millones cubren casi exactamente los US$9,906 millones de deuda que vencen en los próximos 12 meses.
+
+**¿Convertible, deuda recta o capital?**
+
+```{r guia-comparacion}
+kable(data.frame(
+  Criterio = c("Pago anual en efectivo", "Costo económico", "Dilución", "Señal al mercado", "Congruencia con Apple hoy"),
+  `Deuda recta` = c(paste0(pct(conv_y), " de cupón"), "Los intereses", "Ninguna", "Neutral", "Alta: así emite hoy"),
+  Convertible = c(paste0(pct(conv_cupon), " de cupón"), "Intereses + opción entregada (VPN cero)",
+                  paste0(pct(acc_conv / acciones_apple, 2), " si AAPL supera ", usd(conv_K)), "Confianza en un alza moderada",
+                  "Media: no necesita liquidez"),
+  Acciones = c(paste0(pct(q), " de dividendo"), "Dilución inmediata", "Inmediata", "La acción está cara",
+               "Baja: recompra US$85,800 M al año"), check.names = FALSE),
+  caption = "Alternativas de financiamiento para US$10,000 millones")
+```
+
+El convertible ahorra efectivo, no valor: paga con opciones lo que deja de pagar en cupón. Le conviene a un emisor que necesita
+liquidez, cuya volatilidad el mercado paga por encima de su valor justo o que espera un alza moderada de su acción. Apple tiene
+efectivo neto, calificación Aaa y recompra acciones cada trimestre; emitir algo que puede convertirse en acciones va en sentido
+contrario a esas recompras, salvo que se acompañe del call spread.
+
+**¿Qué prima de conversión y qué cupón convienen?**
+
+```{r guia-prima}
+cupon_justo <- function(prima = conv_prima, rf = conv_rf, y = conv_y, sigma = conv_sigma) {
+  K <- S0 * (1 + prima); opc <- bs_call(S0, K, rf, q, sigma, conv_T) * conv_F / K
+  uniroot(function(c) precio_bono(c, y) + opc - conv_F, c(-0.3, 0.3), tol = 1e-12)$root
+}
+primas <- c(0.20, 0.25, 0.30, 0.35, 0.40, 0.50)
+kable(data.frame(Prima = pct(primas, 0), `Precio de conversión` = usd(S0 * (1 + primas)),
+                 `Opción por bono` = usd(sapply(primas, function(p) bs_call(S0, S0 * (1 + p), conv_rf, q, conv_sigma, conv_T) * conv_F / (S0 * (1 + p)))),
+                 `Cupón justo` = pct(sapply(primas, cupon_justo)),
+                 `Acciones potenciales` = paste(round(conv_monto / (S0 * (1 + primas)) / 1e6, 1), "M"),
+                 `Dilución` = pct(conv_monto / (S0 * (1 + primas)) / acciones_apple, 2), check.names = FALSE),
+      caption = "Prima de conversión contra cupón justo (σ = GARCH de largo plazo)")
+```
+
+Proponemos una **prima de 30% con un cupón cercano a `r pct(conv_cupon)`**. Está dentro del rango usual de 20% a 35% y mantiene
+la dilución por debajo de 0.2%. Con una prima mayor la opción vale menos, el cupón se acerca al de la deuda recta y el bono
+pierde su atractivo; con una menor, la dilución crece. Para que el convertible genere un ahorro real, Apple tendría que
+colocarlo con un cupón inferior al justo, lo que solo ocurre si los inversionistas pagan una volatilidad mayor que la de GARCH.
+La calculadora interactiva del proyecto (`calculadora/calculadora_convertible.html`) permite probar esas combinaciones.
+
 # Administración del riesgo cambiario y de tasas de interés
 
 Apple emite €5,000 millones a 7 años en la zona euro, donde vendió US$127,600 millones en su año fiscal 2026, y los
@@ -505,6 +600,57 @@ es **SOFR + `r pb(irs_spread)`**. Al contratarse, el IRS vale cero. Si SOFR baja
 `r musd(esc_irs[[2]][2] * 1e6, 0)`; si sube 100 pb pierde `r musd(-esc_irs[[2]][6] * 1e6, 0)`. Los dos métodos de Hull (bonos y
 FRAs) dan el mismo valor, y el DV01 es de `r usd(dv01, 0)` por punto base. El IRS no elimina el riesgo de tasas: lo cambia de
 riesgo de valor a riesgo de flujo.
+
+## Futuros y T-lock: cubrir la tasa antes de emitir
+
+Entre la decisión de emitir y el día en que se fija el cupón pasan varias semanas. Si en ese lapso suben los Treasuries, el cupón
+justo del convertible también sube. El 27 de octubre, FedWatch de CME asignaba **84.5% de probabilidad a un alza** de la Fed el
+9 de diciembre (de 3.75%–4.00% a 4.00%–4.25%), con el futuro de fondos federales ZQZ6 en 95.955. Ese riesgo se cubre con un
+**treasury lock** (T-lock) o vendiendo **futuros de Treasury**.
+
+```{r tlock}
+anualidad <- function(y) sum(1 / (1 + y / conv_m)^(1:(conv_T * conv_m))) / conv_m       # VP de US$1 anual pagado semestralmente
+costo_extra <- function(d) (cupon_justo(rf = conv_rf + d, y = conv_y + d) - conv_cupon) * conv_monto * anualidad(conv_y + d)
+tl_N <- (costo_extra(1e-4) - costo_extra(-1e-4)) / 2 / (1e-4 * anualidad(conv_rf))      # nocional del T-lock (iguala DV01)
+tl_pago <- function(d) tl_N * d * anualidad(conv_rf + d)                                 # liquidación en efectivo para Apple
+esc_tl <- data.frame(d = c(-50, -25, 0, 25, 50)) %>%
+  mutate(`Cupón justo` = pct(sapply(d, function(x) cupon_justo(rf = conv_rf + x / 1e4, y = conv_y + x / 1e4))),
+         `Costo adicional (VP)` = sapply(d, function(x) costo_extra(x / 1e4)) / 1e6,
+         `Liquidación del T-lock` = sapply(d, function(x) tl_pago(x / 1e4)) / 1e6,
+         Neto = `Liquidación del T-lock` - `Costo adicional (VP)`) %>%
+  rename(`Cambio del Treasury (pb)` = d)
+kable(esc_tl, digits = 1, caption = paste0("Convertible de US$10,000 M con T-lock a 6 años sobre ", musd(tl_N, 0), " de nocional (millones de USD)"))
+
+# Alternativa con futuros del Treasury a 10 años (ZN). Aproximación: el CTD se aproxima con un Treasury a 7 años a la par.
+precio_ust <- function(y, T = 7, c = ust[["7"]]) sum(100000 * c / 2 / (1 + y / 2)^(1:(2 * T))) + 100000 / (1 + y / 2)^(2 * T)
+dv01_zn <- (precio_ust(ust[["7"]] - 1e-4) - precio_ust(ust[["7"]] + 1e-4)) / 2
+dv01_cubrir <- tl_N * 1e-4 * anualidad(conv_rf)
+n_zn <- dv01_cubrir / dv01_zn
+
+# Futuros de Euro FX (6E) como alternativa al CCS: €125,000 por contrato; 6EZ6 a 1.115 el 27-oct
+fx_6e <- 1.115
+n_6e_principal <- ccs_eur / 125000
+n_6e_cupon <- ccs_eur * ccs_cupon_eur / 125000
+margen_10 <- ccs_eur * fx_6e * 0.10
+kable(data.frame(Concepto = c("DV01 a cubrir", "DV01 aproximado de un futuro ZN", "Futuros ZN a vender",
+                              "Futuros 6E para el principal de €5,000 M", "Futuros 6E para un cupón anual",
+                              "Llamada de margen si el euro sube 10%"),
+                 Valor = c(usd(dv01_cubrir, 0), usd(dv01_zn, 2), scales::comma(round(n_zn)), scales::comma(n_6e_principal),
+                           scales::comma(round(n_6e_cupon)), musd(margen_10))),
+      caption = "Coberturas con futuros de CME")
+```
+
+**Interpretación.** Si los Treasuries suben 50 pb antes de la colocación, el cupón justo sube a
+`r esc_tl[[2]][5]` y Apple pagaría `r musd(esc_tl[[3]][5] * 1e6)` más en valor presente; el T-lock liquida
+`r musd(esc_tl[[4]][5] * 1e6)` a su favor y el neto es casi cero. Si las tasas bajan, Apple paga en el T-lock lo que ahorra en
+cupón: fija la tasa, no apuesta. El nocional (`r musd(tl_N, 0)`) es menor que la emisión: cuando suben las tasas también sube el valor de la opción
+de conversión, lo que compensa parte del alza del cupón. La alternativa con futuros es vender unos `r scales::comma(round(n_zn))` contratos ZN; son más líquidos, pero
+tienen margen diario y riesgo de base porque el entregable más barato no es exactamente el bono a 6 años.
+
+Para la deuda en euros, los futuros 6E podrían cubrir el tipo de cambio, pero requerirían `r scales::comma(n_6e_principal)` contratos,
+renovarse cada trimestre durante 7 años y aportar `r musd(margen_10)` de margen si el euro sube 10%. Sirven para coberturas de
+corto plazo, como un cupón (`r scales::comma(round(n_6e_cupon))` contratos); para cubrir el principal a 7 años, el CCS es más
+adecuado porque iguala plazos y flujos sin margen diario.
 
 # Portafolio de 18 estrategias de opciones y griegas
 
@@ -664,6 +810,10 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
   swaps = list(eurusd = eurusd, usd_n = ccs_usd, cupon_eur = ccs_cupon_eur, ccs = ccs_tasa_usd, directo = directo_usd, irs_fijo = irs_fijo,
                spread_flot = irs_spread, dv01 = dv01, fwd7 = fwd[ccs_T], vp_sin = vp_sin, vp_con = vp_con, esc = esc, esc_irs = esc_irs,
                zero_usd = -log(cu$D) / (1:10), zero_eur = -log(ce$D) / (1:10)),
+  tlock = list(N = tl_N, dv01 = dv01_cubrir, n_zn = n_zn, dv01_zn = dv01_zn, n_6e = n_6e_principal, n_6e_cupon = n_6e_cupon,
+               margen_10 = margen_10, esc = esc_tl),
+  apple = list(ventas = 478834, utilidad = 132175, caja = 136935, deuda = 78114, deuda_corto = 9906, papel = 1997,
+               recompras = 85800, acciones = acciones_apple, emision = emision, derivados = derivados_apple),
   griegas = griegas_equipo, netas = netas, cuenta = cuenta, inventario = inventario, comp = comp
 ), "resultados/resumen.json", auto_unbox = TRUE, digits = 8, dataframe = "rows", na = "null")
 ```
@@ -689,6 +839,23 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
 6. **Estrategias.** Los spreads limitan pérdida y ganancia desde el inicio, pero su resultado depende de la dirección del
    subyacente: los de oro y WTI perdieron valor porque el mercado se movió en contra. Las griegas muestran que combinar
    posiciones largas y cortas cambia el perfil de riesgo, no lo elimina.
+7. **Futuros y T-lock.** Con 84.5% de probabilidad de alza de la Fed en diciembre, fijar la tasa antes de colocar es prudente:
+   un T-lock sobre `r musd(tl_N, 0)` (o unos `r scales::comma(round(n_zn))` futuros ZN) neutraliza un movimiento de ±50 pb en el
+   cupón. Los futuros 6E sirven para el corto plazo; el CCS es mejor para el principal a 7 años.
+
+# Recomendación para Apple
+
+1. **Financiamiento.** Apple puede seguir emitiendo deuda senior: paga entre 22 y 55 pb sobre Treasuries y tiene efectivo neto.
+   Un convertible con prima de 30% y cupón cercano a `r pct(conv_cupon)` solo se justifica si los inversionistas pagan una
+   volatilidad mayor que la estimada; en ese caso debe acompañarse del call spread para no contradecir las recompras.
+2. **Tasas.** Cubrir la tasa con un T-lock o futuros de Treasury entre la decisión y la colocación. Usar el IRS solo si la
+   tesorería quiere deliberadamente más deuda flotante, sabiendo que cambia riesgo de valor por riesgo de flujo.
+3. **Divisas.** Para deuda en euros, el cross-currency swap es la cobertura natural: fija el tipo de cambio de cupones y
+   principal y, con las curvas actuales, deja la deuda en `r pct(ccs_tasa_usd)`, por debajo de un bono directo en dólares.
+4. **Acciones.** Para una posición en AAPL, la protective put cumplió su función de seguro; la call 345 es una apuesta alcista
+   de pérdida limitada cuya conveniencia depende de que la volatilidad futura supere la implícita de `r pct(iv_mercado, 1)`.
+5. **Seguimiento.** Revisar cada trimestre la volatilidad implícita, las griegas netas por subyacente y escenarios de estrés de
+   AAPL, EUR/USD y SOFR.
 
 # Limitaciones
 
@@ -697,6 +864,8 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
   basis EUR/USD son supuestos.
 - El convertible y el call spread usan Black-Scholes europeo con volatilidad constante; no incluyen costos de emisión ni
   cláusulas contractuales.
+- El T-lock y los futuros se dimensionan por DV01; el DV01 del futuro ZN aproxima el bono entregable más barato con un Treasury
+  a 7 años y no considera el factor de conversión.
 - Las primas de Bloomberg, LSEG y CME son de sus fechas originales y no se comparan directamente con el corte del 6 de noviembre.
 - Material académico; no constituye recomendación de inversión.
 
@@ -706,11 +875,14 @@ if (requireNamespace("jsonlite", quietly = TRUE)) jsonlite::write_json(list(
 kable(data.frame(
   Dato = c("Precios diarios de AAPL", "Treasuries (1, 2, 3, 5, 7 y 10 años)", "Curva SOFR", "Curva €STR", "EUR/USD",
            "Dividendo y resultados de Apple", "Operaciones de Investopedia", "Bull Call Spread AAPL, oro y WTI", "18 estrategias y griegas",
-           "Settle de opciones de oro y WTI", "Opciones 6EZ6", "FedWatch y NQZ6", "Diferenciales de crédito y basis"),
+           "Settle de opciones de oro y WTI", "Opciones y futuro 6EZ6", "FedWatch, ZQZ6 y NQZ6", "Deuda, efectivo y resultados de Apple",
+           "Derivados de Apple", "Emisión de Apple (7 tramos)", "Calificaciones de Apple", "Diferenciales de crédito y basis"),
   Fecha = c("6-nov-2021 a 6-nov-2026", "6-nov-2026", "2-nov-2026", "3-nov-2026", "6-nov-2026", "Q4 FY2026 (30-oct-2026)",
-            "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "28-oct-2026", "27-oct-2026", "Supuesto"),
+            "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "27 y 28-oct-2026", "27-oct-2026", "26-sep-2026",
+            "28-mar-2026", "5-nov-2026", "Vigentes", "Supuesto"),
   Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "BlueGamma", "TradingNews", "Apple, 10-K FY2026",
              "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG (Tarea 3 del equipo)",
-             "CME Group, Settlements", "CME Group", "CME Group", "Equipo (40 pb, 45 pb, −10 pb)")),
+             "CME Group, Settlements", "CME Group", "CME Group", "Apple, 10-K FY2026", "Apple, 10-Q Q2 FY2026",
+             "Suplemento de prospecto (SEC)", "Moody's (Aaa) y S&P (AA+)", "Equipo (40 pb, 45 pb, −10 pb)")),
   caption = "Cada dato conserva su fecha original")
 ```
