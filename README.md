@@ -17,7 +17,7 @@ operaciones realizadas en simuladores.
 | Dashboard ejecutivo | [Abrir dashboard](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/dashboard/dashboard_ejecutivo.html) |
 | Calculadora bono + opción y call spread | [Abrir calculadora](https://danielsanchez-ai.github.io/Derivados_ProyectoFinal_AAPL/calculadora/calculadora_convertible.html) |
 | Presentación (PDF) | [Abrir presentación](presentacion/Presentacion_Proyecto_Final_Equipo7.pdf) |
-| Uso de inteligencia artificial | [Abrir PDF](ia/uso_de_IA_Equipo7.pdf) |
+| Uso de inteligencia artificial | [Resumen](ia/uso_de_IA_Equipo7.pdf) · [Conversación con TecGPT](ia/conversacion_TecGPT_con_notas.pdf) |
 | Código fuente | [`Proyecto_Final_Derivados.Rmd`](Proyecto_Final_Derivados.Rmd) |
 
 ## Contenido
@@ -31,11 +31,12 @@ operaciones realizadas en simuladores.
 | `datos/griegas_equipo.csv` | Griegas de las 18 estrategias (LSEG, 12-oct-2026). También vienen incluidas dentro del Rmd. |
 | `resultados/resumen.json` | Cifras clave que exporta el Rmd. |
 | `notebooks/` | Notebook GARCH complementario (AAPL, oro, WTI, Euro FX y Nasdaq), ejecutado con resultados visibles, y su salida en JSON. |
-| `evidencias/` | Capturas de Investopedia y CME Group; pantallas y documento de estrategias en Bloomberg. |
+| `evidencias/` | Capturas de LSEG Workspace, Bloomberg (pantallas y documento de estrategias), CME Group, TradingView e Investopedia. |
+| `antecedentes/` | Trabajos previos del equipo con datos de LSEG: Tarea 3 (18 estrategias y griegas) y análisis GARCH de AAPL del 3-nov. |
 | `calculadora/calculadora_convertible.html` | Calculadora interactiva del convertible (bono + opción) y del call spread, con parámetros editables. |
 | `presentacion/` | Presentación en PDF (14 diapositivas). |
 | `reporte_ejecutivo/` | Reporte ejecutivo en Word y PDF (4 páginas). |
-| `ia/` | Prompts, código recibido y correcciones del uso de IA. |
+| `ia/` | Uso de IA: resumen de prompts, código y correcciones, y la conversación completa con TecGPT con notas del equipo. |
 | `index.html` | Página de inicio del proyecto (GitHub Pages). |
 
 ## Cómo reproducir
@@ -60,7 +61,7 @@ Si `rugarch` está instalado, el reporte lo usa para validar los parámetros.
 | EUR/USD | 6-nov-2026 | TradingNews |
 | Operaciones | 30-sep a 6-nov-2026 | Investopedia |
 | Spreads de AAPL, oro y WTI | 14-oct-2026 | Bloomberg OVME / OVML |
-| 18 estrategias y griegas | 12-oct-2026 | LSEG |
+| 18 estrategias y griegas | 12-oct-2026 | LSEG Workspace (capturas en `evidencias/lseg/`) |
 | Settle de oro y WTI, 6EZ6, FedWatch, NQZ6 | 27 y 28-oct-2026 | CME Group |
 | Deuda, efectivo y resultados de Apple | 26-sep-2026 | Apple, 10-K FY2026 |
 | Derivados de Apple | 28-mar-2026 | Apple, 10-Q Q2 FY2026 |
@@ -82,8 +83,9 @@ de sesión de R y Jupyter (`.Rhistory`, `.RData`, `.Renviron`, `.ipynb_checkpoin
 
 ## Uso de inteligencia artificial
 
-El código, el dashboard y la redacción se elaboraron con apoyo de Claude (Anthropic), con datos, operaciones y decisiones
+El código, el dashboard y la redacción se elaboraron con apoyo de Claude (Anthropic) y TecGPT, con datos, operaciones y decisiones
 del equipo. El equipo revisó las cifras contra sus fuentes. El detalle de prompts, código recibido y correcciones está en
-[`ia/uso_de_IA_Equipo7.pdf`](ia/uso_de_IA_Equipo7.pdf).
+[`ia/uso_de_IA_Equipo7.pdf`](ia/uso_de_IA_Equipo7.pdf); la conversación con TecGPT, en
+[`ia/conversacion_TecGPT_con_notas.pdf`](ia/conversacion_TecGPT_con_notas.pdf).
 
 *Material académico; no constituye recomendación de inversión.*

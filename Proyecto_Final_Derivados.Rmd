@@ -881,7 +881,7 @@ kable(data.frame(
             "30-sep a 6-nov-2026", "14-oct-2026", "12-oct-2026", "27-oct-2026", "27 y 28-oct-2026", "27-oct-2026", "26-sep-2026",
             "28-mar-2026", "5-nov-2026", "Vigentes", "Supuesto"),
   Fuente = c("Yahoo Finance (datos/aapl_yahoo.csv)", "Forbes Advisor", "BlueGamma", "BlueGamma", "TradingNews", "Apple, 10-K FY2026",
-             "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG (Tarea 3 del equipo)",
+             "Investopedia: Trade History, Performance History, Holdings", "Bloomberg OVME / OVML", "LSEG Workspace (Tarea 3; evidencias/lseg)",
              "CME Group, Settlements", "CME Group", "CME Group", "Apple, 10-K FY2026", "Apple, 10-Q Q2 FY2026",
              "Suplemento de prospecto (SEC)", "Moody's (Aaa) y S&P (AA+)", "Equipo (40 pb, 45 pb, −10 pb)")),
   caption = "Cada dato conserva su fecha original")
